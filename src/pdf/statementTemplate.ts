@@ -146,6 +146,15 @@ export function buildStatementHtml(
       : ""
   }
 
+  ${
+    showReferral && statement.referralRecipient
+      ? `<div class="row">
+           <div class="label">Referral Paid To</div>
+           <div class="value">${escapeHtml(statement.referralRecipient)}</div>
+         </div>`
+      : ""
+  }
+
   <div class="row">
     <div class="label">Net commission</div>
     <div class="value">${money(summary.netCommissionAmount)}</div>

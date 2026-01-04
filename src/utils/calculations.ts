@@ -32,7 +32,8 @@ export function calculateStatementSummary(statement: Statement): StatementSummar
 
   const grossCommissionAmount = listingCommissionAmount + buyerCommissionAmount;
 
-  const referralFeeAmount = grossCommissionAmount * ((statement.referralFeePct ?? 0) / 100);
+  const referralFeePct = statement.referralFeePercent ?? statement.referralFeePct ?? 0;
+  const referralFeeAmount = grossCommissionAmount * (referralFeePct / 100);
 
   const netCommissionAmount = grossCommissionAmount - referralFeeAmount;
 

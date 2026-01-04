@@ -47,8 +47,21 @@ export default function FeeStatementScreen() {
   const [statement, setStatement] = useState<Statement>(() => emptyStatement);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
+  function normalizedStatementForSave(next: Statement): Statement {
+    const referralFeePercent = next.referralFeePercent ?? next.referralFeePct ?? 0;
+    const referralRecipient = next.referralRecipient?.trim() || undefined;
+
+    return {
+      ...next,
+      referralFeePct: next.referralFeePct ?? referralFeePercent,
+      referralFeePercent,
+      referralRecipient: referralFeePercent > 0 ? referralRecipient : undefined,
+    };
+  }
+
   async function saveStatement() {
-    const errors = validateStatement(statement);
+    const next = normalizedStatementForSave(statement);
+    const errors = validateStatement(next);
 
     if (errors.length > 0) {
       Alert.alert(
@@ -58,12 +71,13 @@ export default function FeeStatementScreen() {
       return;
     }
 
-    await upsertStatement(statement);
+    await upsertStatement(next);
     Alert.alert("Saved", "Statement saved successfully.");
   }
 
   async function exportPdf() {
-    const errors = validateStatement(statement);
+    const next = normalizedStatementForSave(statement);
+    const errors = validateStatement(next);
 
     if (errors.length > 0) {
       Alert.alert(
@@ -74,7 +88,7 @@ export default function FeeStatementScreen() {
     }
 
     try {
-      await exportStatementPdf(statement, getFuelProrationStatementAddon());
+      await exportStatementPdf(next, getFuelProrationStatementAddon());
     } catch {
       Alert.alert(
         "Export failed",
@@ -188,12 +202,32 @@ export default function FeeStatementScreen() {
             setStatement((prev) => ({
               ...prev,
               referralFeePct: toNumber(text) || 0,
+              referralFeePercent: toNumber(text) || 0,
+              referralRecipient: (toNumber(text) || 0) > 0 ? prev.referralRecipient : undefined,
             }))
           }
           placeholder="0"
           keyboardType="numeric"
           style={styles.input}
         />
+
+        {Number(statement.referralFeePct ?? statement.referralFeePercent ?? 0) > 0 ? (
+          <>
+            <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Referral Paid To</ThemedText>
+            <NeonInput
+              value={statement.referralRecipient ?? ""}
+              onChangeText={(text) =>
+                setStatement((prev) => ({
+                  ...prev,
+                  referralRecipient: text,
+                }))
+              }
+              placeholder="Referral agent or brokerage"
+              autoCapitalize="words"
+              style={styles.input}
+            />
+          </>
+        ) : null}
 
         <SectionHeader title="Deposit" />
 
@@ -337,6 +371,9 @@ export default function FeeStatementScreen() {
         <ThemedText>Buyer commission: {money(summary.buyerCommissionAmount)}</ThemedText>
         <ThemedText>Gross commission: {money(summary.grossCommissionAmount)}</ThemedText>
         <ThemedText>Referral fee: {money(summary.referralFeeAmount)}</ThemedText>
+        {summary.referralFeeAmount > 0 && statement.referralRecipient ? (
+          <ThemedText>Referral paid to: {statement.referralRecipient}</ThemedText>
+        ) : null}
         <ThemedText type="defaultSemiBold" style={styles.previewNet}>
           Net commission: {money(summary.netCommissionAmount)}
         </ThemedText>

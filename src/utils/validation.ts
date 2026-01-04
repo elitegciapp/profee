@@ -43,10 +43,8 @@ export function validateStatement(statement: Statement): ValidationError[] {
   }
 
   /* ---------- Referral ---------- */
-  if (
-    Number.isFinite(statement.referralFeePct) &&
-    (statement.referralFeePct! < 0 || statement.referralFeePct! > 100)
-  ) {
+  const referralPct = statement.referralFeePercent ?? statement.referralFeePct;
+  if (Number.isFinite(referralPct) && (referralPct! < 0 || referralPct! > 100)) {
     errors.push({
       field: "referralFeePct",
       message: "Referral fee must be between 0 and 100%.",

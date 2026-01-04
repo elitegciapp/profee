@@ -21,6 +21,8 @@ export interface Statement {
   buyerCommissionPct?: number; // 0–100
 
   referralFeePct?: number; // 0–100
+  referralFeePercent?: number; // 0–100 (alias)
+  referralRecipient?: string;
 
   deposit?: Deposit;
 
