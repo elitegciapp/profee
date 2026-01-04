@@ -136,6 +136,7 @@ export default function FuelScreen() {
   const [tanks, setTanks] = useState<FuelTank[]>([]);
   const [includeInStatement, setIncludeInStatement] = useState<boolean>(initial.includeInStatement);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [priceInputById, setPriceInputById] = useState<Record<string, string>>({});
 
   const { tankResults, totalCredit } = useMemo(() => calculateFuelProration(tanks), [tanks]);
 
@@ -159,20 +160,28 @@ export default function FuelScreen() {
   }, [includeInStatement, totalCredit, totalPercent]);
 
   function addTank() {
+    const id = createId();
     setTanks((prev) => [
       ...prev,
       {
-        id: createId(),
+        id,
         capacityGallons: 0,
         currentGallons: 0,
         percentFull: undefined,
         pricePerGallon: 0,
       },
     ]);
+
+    setPriceInputById((prev) => ({ ...prev, [id]: "" }));
   }
 
   function removeTank(id: string) {
     setTanks((prev) => prev.filter((t) => t.id !== id));
+    setPriceInputById((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   }
 
   function updateTank(id: string, patch: Partial<FuelTank>) {
@@ -311,14 +320,28 @@ export default function FuelScreen() {
               Price per gallon
             </ThemedText>
             <NeonInput
-              value={tank.pricePerGallon ? String(tank.pricePerGallon) : ""}
-              onChangeText={(text) =>
+              value={
+                priceInputById[tank.id] ?? (tank.pricePerGallon ? String(tank.pricePerGallon) : "")
+              }
+              onChangeText={(text) => {
+                setPriceInputById((prev) => ({ ...prev, [tank.id]: text }));
                 updateTank(tank.id, {
                   pricePerGallon: Math.max(0, parseDecimalInput(text)),
-                })
-              }
+                });
+              }}
+              onBlur={() => {
+                const raw = priceInputById[tank.id] ?? "";
+                const parsed = Math.max(0, parseDecimalInput(raw));
+
+                updateTank(tank.id, { pricePerGallon: parsed });
+                setPriceInputById((prev) => ({
+                  ...prev,
+                  [tank.id]: parsed > 0 ? String(parsed) : "",
+                }));
+              }}
               placeholder="e.g. 3.27"
               keyboardType="decimal-pad"
+              inputMode="decimal"
               style={styles.input}
             />
 
