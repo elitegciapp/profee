@@ -1,0 +1,17 @@
+# Keep repo line endings consistent across OSes.
+# This does NOT affect the app bundle/runtime; it only affects how Git checks out/commits text files.
+* text=auto eol=lf
+
+# Treat common binary assets as binary (no line-ending conversion)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
