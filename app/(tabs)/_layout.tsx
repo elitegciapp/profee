@@ -4,9 +4,37 @@ import { StyleSheet, View } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { glow, theme } from '@/constants/theme';
+import { useTheme } from '@/src/context/ThemeContext';
 
 export default function TabLayout() {
+  const { theme } = useTheme();
+
+  const styles = StyleSheet.create({
+    iconTile: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 12,
+      backgroundColor: 'transparent',
+    },
+
+    iconTileActive: {
+      backgroundColor: theme.colors.bgSecondary,
+      ...theme.glow,
+    },
+    underline: {
+      height: 2,
+      width: 18,
+      borderRadius: 1,
+      backgroundColor: 'transparent',
+      marginTop: 4,
+    },
+    underlineActive: {
+      backgroundColor: theme.colors.accent,
+    },
+  });
+
   return (
     <Tabs
       screenOptions={{
@@ -68,39 +96,13 @@ export default function TabLayout() {
       />
     </Tabs>
   );
+
+  function TabIcon({ focused, children }: { focused: boolean; children: React.ReactNode }) {
+    return (
+      <View style={[styles.iconTile, focused && styles.iconTileActive]}>
+        {children}
+        <View style={[styles.underline, focused && styles.underlineActive]} />
+      </View>
+    );
+  }
 }
-
-function TabIcon({ focused, children }: { focused: boolean; children: React.ReactNode }) {
-  return (
-    <View style={[styles.iconTile, focused && styles.iconTileActive]}>
-      {children}
-      <View style={[styles.underline, focused && styles.underlineActive]} />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  iconTile: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: 'transparent',
-  },
-
-  iconTileActive: {
-    backgroundColor: theme.colors.bgSecondary,
-    ...glow,
-  },
-  underline: {
-    height: 2,
-    width: 18,
-    borderRadius: 1,
-    backgroundColor: 'transparent',
-    marginTop: 4,
-  },
-  underlineActive: {
-    backgroundColor: theme.colors.accent,
-  },
-});

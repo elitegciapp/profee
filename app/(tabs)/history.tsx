@@ -4,13 +4,52 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { colors, typography, ui } from "@/constants/theme";
 import type { Statement } from "@/src/models/statement";
 import { deleteStatement, getAllStatements } from "@/src/storage/statements";
+import { useTheme } from "@/src/context/ThemeContext";
 
 export default function HistoryScreen() {
+  const { theme } = useTheme();
   const router = useRouter();
   const [statements, setStatements] = useState<Statement[]>([]);
+
+  const styles = StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: theme.colors.bgPrimary,
+    },
+    container: {
+      padding: 16,
+      paddingBottom: 28,
+      gap: 12,
+    },
+    emptyText: {
+      color: theme.colors.textMuted,
+    },
+    card: {
+      ...theme.ui.card,
+      gap: 6,
+      marginBottom: 0,
+    },
+    metaText: {
+      fontSize: 12,
+      color: theme.colors.textMuted,
+    },
+    actions: {
+      flexDirection: "row",
+      gap: 10,
+      marginTop: 8,
+    },
+    buttonBase: {
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      backgroundColor: "transparent",
+    },
+  });
 
   async function loadHistory() {
     const data = await getAllStatements();
@@ -77,68 +116,25 @@ export default function HistoryScreen() {
       </ScrollView>
     </ThemedView>
   );
+
+  function Button({
+    label,
+    onPress,
+    tone = "primary",
+  }: {
+    label: string;
+    onPress: () => void;
+    tone?: "primary" | "danger";
+  }) {
+    const borderColor = tone === "danger" ? theme.colors.danger : theme.colors.accent;
+    const textColor = tone === "danger" ? theme.colors.danger : theme.colors.accent;
+
+    return (
+      <Pressable onPress={onPress} style={[styles.buttonBase, { borderColor }]}>
+        <ThemedText type="defaultSemiBold" style={{ color: textColor }}>
+          {label}
+        </ThemedText>
+      </Pressable>
+    );
+  }
 }
-
-function Button({
-  label,
-  onPress,
-  tone = "primary",
-}: {
-  label: string;
-  onPress: () => void;
-  tone?: "primary" | "danger";
-}) {
-  const borderColor = tone === "danger" ? colors.danger : colors.accent;
-  const textColor = tone === "danger" ? colors.danger : colors.accent;
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[styles.buttonBase, { borderColor }]}
-    >
-      <ThemedText type="defaultSemiBold" style={{ color: textColor }}>
-        {label}
-      </ThemedText>
-    </Pressable>
-  );
-}
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.bgPrimary,
-  },
-  container: {
-    padding: 16,
-    paddingBottom: 28,
-    gap: 12,
-  },
-  emptyText: {
-    color: colors.textMuted,
-  },
-  card: {
-    ...ui.card,
-    gap: 6,
-  },
-  metaText: {
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  actions: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 8,
-  },
-  buttonBase: {
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    backgroundColor: "transparent",
-  },
-  sectionHeader: {
-    ...typography.sectionHeader,
-  },
-});

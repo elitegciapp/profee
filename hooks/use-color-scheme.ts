@@ -1,5 +1,8 @@
 import { useMemo } from 'react';
 
+import { useTheme } from '@/src/context/ThemeContext';
+
 export function useColorScheme() {
-	return useMemo(() => 'dark' as const, []);
+	const { colorScheme } = useTheme();
+	return useMemo(() => colorScheme, [colorScheme]);
 }

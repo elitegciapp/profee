@@ -9,7 +9,7 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 
-import { colors } from "@/constants/theme";
+import { useTheme } from "@/src/context/ThemeContext";
 
 type Props = {
   percent: number; // 0..100
@@ -61,6 +61,8 @@ export function FuelGauge({
   snapPoints = [0, 25, 50, 75, 100],
   snapThreshold = 4,
 }: Props) {
+  const { theme } = useTheme();
+
   const p = useSharedValue(clamp(percent || 0, 0, 100));
   const startPercent = useSharedValue(0);
   const lastSnap = useSharedValue<number>(Math.round(clamp(percent || 0, 0, 100)));
@@ -143,6 +145,81 @@ export function FuelGauge({
   const safePercent = clamp(percent || 0, 0, 100);
   const credit = ((Math.max(0, capacity) * safePercent) / 100) * Math.max(0, pricePerGallon);
 
+  const styles = StyleSheet.create({
+    container: {
+      alignItems: "center",
+      marginVertical: 16,
+    },
+    label: {
+      color: theme.colors.textSecondary,
+      marginBottom: 6,
+      fontSize: 12,
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    ticks: {
+      justifyContent: "space-between",
+      paddingVertical: 6,
+    },
+    tickRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    tickText: {
+      width: 20,
+      textAlign: "right",
+      color: theme.colors.textSecondary,
+      fontSize: 12,
+    },
+    tickLine: {
+      width: 10,
+      height: 1,
+      backgroundColor: theme.colors.border,
+    },
+    gauge: {
+      width: 76,
+      borderRadius: 14,
+      backgroundColor: theme.colors.bgSecondary,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      overflow: "hidden",
+      justifyContent: "flex-end",
+    },
+    fill: {
+      backgroundColor: theme.colors.accent,
+      width: "100%",
+    },
+    overlay: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 6,
+    },
+    percentText: {
+      color: theme.colors.textPrimary,
+      fontWeight: "700",
+      fontSize: 16,
+    },
+    helper: {
+      color: theme.colors.textMuted,
+      fontSize: 11,
+      marginTop: 4,
+    },
+    credit: {
+      marginTop: 10,
+      color: theme.colors.accent,
+      fontWeight: "600",
+    },
+  });
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Fuel Level</Text>
@@ -172,78 +249,3 @@ export function FuelGauge({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    marginVertical: 16,
-  },
-  label: {
-    color: colors.textSecondary,
-    marginBottom: 6,
-    fontSize: 12,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  ticks: {
-    justifyContent: "space-between",
-    paddingVertical: 6,
-  },
-  tickRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  tickText: {
-    width: 20,
-    textAlign: "right",
-    color: colors.textSecondary,
-    fontSize: 12,
-  },
-  tickLine: {
-    width: 10,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  gauge: {
-    width: 76,
-    borderRadius: 14,
-    backgroundColor: colors.bgSecondary,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: "hidden",
-    justifyContent: "flex-end",
-  },
-  fill: {
-    backgroundColor: colors.accent,
-    width: "100%",
-  },
-  overlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 6,
-  },
-  percentText: {
-    color: colors.textPrimary,
-    fontWeight: "700",
-    fontSize: 16,
-  },
-  helper: {
-    color: colors.textMuted,
-    fontSize: 11,
-    marginTop: 4,
-  },
-  credit: {
-    marginTop: 10,
-    color: colors.accent,
-    fontWeight: "600",
-  },
-});

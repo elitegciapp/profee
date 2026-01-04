@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 import { ThemedText } from '@/components/themed-text';
-import { colors } from '@/constants/theme';
+import { useTheme } from '@/src/context/ThemeContext';
 
 type Props = {
   size?: number;
@@ -20,18 +20,43 @@ export function DonutChart({
   centerLabel,
   centerValue,
 }: Props) {
+  const { theme } = useTheme();
+
   const clamped = Math.max(0, Math.min(1, value));
   const r = (size - strokeWidth) / 2;
   const c = 2 * Math.PI * r;
   const dash = c * clamped;
+
+  const styles = StyleSheet.create({
+    wrap: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    center: {
+      position: 'absolute',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 6,
+    },
+    centerLabel: {
+      color: theme.colors.textMuted,
+      fontSize: 11,
+    },
+    centerValue: {
+      color: theme.colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '700',
+      marginTop: 2,
+    },
+  });
 
   return (
     <View style={[styles.wrap, { width: size, height: size }]}>
       <Svg width={size} height={size}>
         <Defs>
           <LinearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor={colors.accent} stopOpacity="1" />
-            <Stop offset="1" stopColor={colors.accent} stopOpacity="0.65" />
+            <Stop offset="0" stopColor={theme.colors.accent} stopOpacity="1" />
+            <Stop offset="1" stopColor={theme.colors.accent} stopOpacity="0.65" />
           </LinearGradient>
         </Defs>
 
@@ -39,7 +64,7 @@ export function DonutChart({
           cx={size / 2}
           cy={size / 2}
           r={r}
-          stroke={colors.border}
+          stroke={theme.colors.border}
           strokeWidth={strokeWidth}
           fill="none"
         />
@@ -64,26 +89,3 @@ export function DonutChart({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  center: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  centerLabel: {
-    color: colors.textMuted,
-    fontSize: 11,
-  },
-  centerValue: {
-    color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-});

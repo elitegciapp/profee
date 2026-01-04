@@ -1,17 +1,17 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ScrollView, StyleSheet, Switch, useWindowDimensions, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { DashboardTile } from '@/components/ui/dashboard-tile';
 import { DonutChart } from '@/components/ui/donut-chart';
 import { LineChart } from '@/components/ui/line-chart';
-import { colors, ui } from '@/constants/theme';
 import type { Statement } from '@/src/models/statement';
 import { getAllStatements } from '@/src/storage/statements';
 import { calculateStatementSummary } from '@/src/utils/calculations';
+import { useTheme } from '@/src/context/ThemeContext';
 
 function money(value: number): string {
   if (!Number.isFinite(value)) return '$0.00';
@@ -19,6 +19,7 @@ function money(value: number): string {
 }
 
 export default function ExploreDashboardScreen() {
+  const { theme, mode, setMode } = useTheme();
   const [statements, setStatements] = useState<Statement[]>([]);
   const [selectedPoint, setSelectedPoint] = useState<{ index: number; value: number } | null>(null);
   const { width: windowWidth } = useWindowDimensions();
@@ -69,12 +70,90 @@ export default function ExploreDashboardScreen() {
 
   const chartWidth = Math.max(280, Math.min(420, Math.round(windowWidth - 32 - 2)));
 
+  const styles = StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: theme.colors.bgPrimary,
+    },
+    container: {
+      padding: 16,
+      paddingBottom: 28,
+      gap: 12,
+    },
+    headerWrap: {
+      borderRadius: 12,
+      overflow: 'hidden',
+      padding: 14,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.bgPrimary,
+      gap: 6,
+    },
+    headerGlow: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    subtle: {
+      color: theme.colors.textSecondary,
+      fontSize: 12,
+    },
+    tilesGrid: {
+      flexDirection: 'column',
+      gap: 12,
+    },
+    miniMeta: {
+      color: theme.colors.textMuted,
+      fontSize: 12,
+    },
+    chartCard: {
+      ...theme.ui.card,
+      gap: 10,
+      marginBottom: 0,
+    },
+    chartHint: {
+      color: theme.colors.textMuted,
+      fontSize: 12,
+    },
+    tooltip: {
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.colors.accent,
+      backgroundColor: theme.colors.bgSecondary,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    tooltipLabel: {
+      color: theme.colors.textMuted,
+      fontSize: 12,
+    },
+    tooltipValue: {
+      color: theme.colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '700',
+      marginTop: 4,
+    },
+    appearanceCard: {
+      ...theme.ui.card,
+      gap: 10,
+      marginBottom: 0,
+    },
+    appearanceLabel: {
+      color: theme.colors.textSecondary,
+      fontSize: 12,
+    },
+    toggleRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 8,
+    },
+  });
+
   return (
     <ThemedView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.headerWrap}>
           <LinearGradient
-            colors={[colors.accentSoft, colors.accentSoft, 'transparent']}
+            colors={[theme.colors.accentSoft, theme.colors.accentSoft, 'transparent']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.headerGlow}
@@ -117,7 +196,7 @@ export default function ExploreDashboardScreen() {
           />
         </View>
 
-        <View style={[ui.card, styles.chartCard]}>
+        <View style={styles.chartCard}>
           <LineChart
             width={chartWidth}
             height={160}
@@ -134,68 +213,26 @@ export default function ExploreDashboardScreen() {
             <ThemedText style={styles.chartHint}>Tap a point for details.</ThemedText>
           )}
         </View>
+
+        <View style={styles.appearanceCard}>
+          <ThemedText style={styles.appearanceLabel}>Appearance</ThemedText>
+
+          <View style={styles.toggleRow}>
+            <ThemedText>System</ThemedText>
+            <Switch value={mode === 'system'} onValueChange={() => setMode('system')} />
+          </View>
+
+          <View style={styles.toggleRow}>
+            <ThemedText>Light</ThemedText>
+            <Switch value={mode === 'light'} onValueChange={() => setMode('light')} />
+          </View>
+
+          <View style={styles.toggleRow}>
+            <ThemedText>Dark</ThemedText>
+            <Switch value={mode === 'dark'} onValueChange={() => setMode('dark')} />
+          </View>
+        </View>
       </ScrollView>
     </ThemedView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.bgPrimary,
-  },
-  container: {
-    padding: 16,
-    paddingBottom: 28,
-    gap: 12,
-  },
-  headerWrap: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bgPrimary,
-    gap: 6,
-  },
-  headerGlow: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  subtle: {
-    color: colors.textSecondary,
-    fontSize: 12,
-  },
-  tilesGrid: {
-    flexDirection: 'column',
-    gap: 12,
-  },
-  miniMeta: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
-  chartCard: {
-    gap: 10,
-  },
-  chartHint: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
-  tooltip: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.accent,
-    backgroundColor: colors.bgSecondary,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  tooltipLabel: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
-  tooltipValue: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-});

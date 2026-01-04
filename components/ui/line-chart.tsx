@@ -4,7 +4,7 @@ import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-nativ
 import { line, curveCatmullRom } from 'd3-shape';
 
 import { ThemedText } from '@/components/themed-text';
-import { colors } from '@/constants/theme';
+import { useTheme } from '@/src/context/ThemeContext';
 
 type Props = {
   width: number;
@@ -21,6 +21,8 @@ export function LineChart({
   label,
   onPointPress,
 }: Props) {
+  const { theme } = useTheme();
+
   const { path, xs, ys } = useMemo(() => {
     const safe = points.length > 1 ? points : [0, ...(points.length ? points : [0])];
     const min = Math.min(...safe);
@@ -47,6 +49,29 @@ export function LineChart({
     };
   }, [height, points, width]);
 
+  const styles = StyleSheet.create({
+    wrap: {
+      gap: 8,
+    },
+    label: {
+      color: theme.colors.textSecondary,
+      fontSize: 12,
+    },
+    chart: {
+      borderRadius: 12,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.bgSecondary,
+    },
+    hit: {
+      position: 'absolute',
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+    },
+  });
+
   return (
     <View style={styles.wrap}>
       {label ? <ThemedText style={styles.label}>{label}</ThemedText> : null}
@@ -54,17 +79,17 @@ export function LineChart({
         <Svg width={width} height={height}>
           <Defs>
             <LinearGradient id="stroke" x1="0" y1="0" x2="1" y2="0">
-                <Stop offset="0" stopColor={colors.accent} stopOpacity="1" />
-                <Stop offset="1" stopColor={colors.accent} stopOpacity="0.65" />
+                <Stop offset="0" stopColor={theme.colors.accent} stopOpacity="1" />
+                <Stop offset="1" stopColor={theme.colors.accent} stopOpacity="0.65" />
             </LinearGradient>
           </Defs>
 
-          <Rect x="0" y="0" width={width} height={height} fill={colors.bgSecondary} rx={10} />
+          <Rect x="0" y="0" width={width} height={height} fill={theme.colors.bgSecondary} rx={10} />
 
           {/* minimal grid */}
           <Path
             d={`M 10 ${height - 18} H ${width - 10}`}
-            stroke={colors.border}
+            stroke={theme.colors.border}
             strokeOpacity={0.35}
             strokeWidth={1}
           />
@@ -77,7 +102,7 @@ export function LineChart({
               cx={xs[xs.length - 1]}
               cy={ys[ys.length - 1]}
               r={4}
-              fill={colors.textPrimary}
+              fill={theme.colors.textPrimary}
             />
           ) : null}
           {xs.length ? (
@@ -85,7 +110,7 @@ export function LineChart({
               cx={xs[xs.length - 1]}
               cy={ys[ys.length - 1]}
               r={8}
-              fill={colors.accent}
+              fill={theme.colors.accent}
               opacity={0.16}
             />
           ) : null}
@@ -104,26 +129,3 @@ export function LineChart({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    gap: 8,
-  },
-  label: {
-    color: colors.textSecondary,
-    fontSize: 12,
-  },
-  chart: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bgSecondary,
-  },
-  hit: {
-    position: 'absolute',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-  },
-});

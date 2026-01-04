@@ -8,13 +8,13 @@ import { ThemedView } from "@/components/themed-view";
 import { NeonInput } from "@/components/ui/neon-input";
 import { NeonCard } from "@/components/ui/neon-card";
 import { SectionHeader } from "@/components/ui/section-header";
-import { colors, typography, ui } from "@/constants/theme";
 import type { Statement } from "@/src/models/statement";
 import { getFuelProrationStatementAddon } from "@/src/storage/fuelProrationSession";
 import { getStatementById, upsertStatement } from "@/src/storage/statements";
 import { calculateStatementSummary } from "@/src/utils/calculations";
 import { exportStatementPdf } from "../../src/pdf/exportStatementPdf";
 import { validateStatement } from "../../src/utils/validation";
+import { useTheme } from "@/src/context/ThemeContext";
 
 function createStatementId(): string {
   try {
@@ -54,9 +54,119 @@ function money(value: number): string {
 }
 
 export default function FeeStatementScreen() {
+  const { theme } = useTheme();
   const params = useLocalSearchParams<{ id?: string }>();
   const [statement, setStatement] = useState<Statement>(() => createEmptyStatement());
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  const styles = StyleSheet.create({
+    scroll: {
+      flex: 1,
+      backgroundColor: theme.colors.bgPrimary,
+    },
+    container: {
+      padding: 16,
+      paddingBottom: 28,
+      gap: 16,
+    },
+    actionsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    saveButtonBase: {
+      paddingHorizontal: 14,
+    },
+    primaryButton: {
+      ...theme.ui.primaryButton,
+    },
+    primaryButtonPressed: {
+      ...theme.ui.primaryButtonPressed,
+    },
+    primaryButtonText: {
+      color: theme.colors.accent,
+    },
+    secondaryButton: {
+      ...theme.ui.secondaryButton,
+    },
+    statusOk: {
+      color: theme.colors.success,
+    },
+    statusBad: {
+      color: theme.colors.danger,
+    },
+    section: {
+      ...theme.ui.card,
+      gap: 12,
+      marginBottom: 0,
+    },
+    previewSection: {
+      ...theme.ui.previewCard,
+      gap: 8,
+      padding: 16,
+      marginBottom: 0,
+    },
+    input: {
+      ...theme.ui.input,
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    toggleWrap: {
+      borderRadius: 12,
+      padding: 4,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    toggleWrapOn: {
+      borderColor: theme.colors.accent,
+      backgroundColor: theme.colors.accentSoft,
+    },
+    splitRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 8,
+    },
+    splitName: {
+      flex: 2,
+    },
+    splitPct: {
+      width: 70,
+      textAlign: "right",
+    },
+    removeButton: {
+      paddingHorizontal: 8,
+      paddingVertical: 8,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.bgSecondary,
+    },
+    remove: {
+      fontSize: 18,
+      color: theme.colors.danger,
+    },
+    addButton: {
+      marginTop: 8,
+      paddingVertical: 12,
+    },
+    previewHeader: {
+      ...theme.typography.sectionHeader,
+      marginTop: 12,
+    },
+    previewNet: {
+      color: theme.colors.accent,
+      textShadowColor: theme.colors.accentSoft,
+      textShadowOffset: { width: 0, height: 0 },
+      textShadowRadius: 10,
+    },
+    fieldLabel: {
+      color: theme.colors.textSecondary,
+    },
+  });
 
   function normalizedStatementForSave(next: Statement): Statement {
     const referralFeePercent = next.referralFeePercent ?? next.referralFeePct ?? 0;
@@ -297,8 +407,8 @@ export default function FeeStatementScreen() {
           >
             <Switch
               value={statement.deposit?.creditedToBuyer ?? false}
-              thumbColor={colors.textPrimary}
-              trackColor={{ false: colors.border, true: colors.accentSoft }}
+              thumbColor={theme.colors.textPrimary}
+              trackColor={{ false: theme.colors.border, true: theme.colors.accentSoft }}
               onValueChange={(value) =>
                 setStatement((prev) => ({
                   ...prev,
@@ -423,110 +533,3 @@ export default function FeeStatementScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-    backgroundColor: colors.bgPrimary,
-  },
-  container: {
-    padding: 16,
-    paddingBottom: 28,
-    gap: 16,
-  },
-  actionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  saveButtonBase: {
-    paddingHorizontal: 14,
-  },
-  primaryButton: {
-    ...ui.primaryButton,
-  },
-  primaryButtonPressed: {
-    ...ui.primaryButtonPressed,
-  },
-  primaryButtonText: {
-    color: colors.accent,
-  },
-  secondaryButton: {
-    ...ui.secondaryButton,
-  },
-  statusOk: {
-    color: colors.success,
-  },
-  statusBad: {
-    color: colors.danger,
-  },
-  section: {
-    ...ui.card,
-    gap: 12,
-  },
-  previewSection: {
-    ...ui.previewCard,
-    gap: 8,
-    padding: 16,
-  },
-  input: {
-    ...ui.input,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  toggleWrap: {
-    borderRadius: 12,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  toggleWrapOn: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accentSoft,
-  },
-  splitRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
-  },
-  splitName: {
-    flex: 2,
-  },
-  splitPct: {
-    width: 70,
-    textAlign: "right",
-  },
-  removeButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bgSecondary,
-  },
-  remove: {
-    fontSize: 18,
-    color: colors.danger,
-  },
-  addButton: {
-    marginTop: 8,
-    paddingVertical: 12,
-  },
-  previewHeader: {
-    ...typography.sectionHeader,
-    marginTop: 12,
-  },
-  previewNet: {
-    color: colors.accent,
-    textShadowColor: colors.accentSoft,
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
-  },
-  fieldLabel: {
-    color: colors.textSecondary,
-  },
-});

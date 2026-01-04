@@ -2,8 +2,8 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { colors } from '@/constants/theme';
 import { NeonCard } from '@/components/ui/neon-card';
+import { useTheme } from '@/src/context/ThemeContext';
 
 type Props = {
   label: string;
@@ -22,6 +22,45 @@ export function DashboardTile({
   right,
   footer,
 }: Props) {
+  const { theme } = useTheme();
+
+  const styles = StyleSheet.create({
+    card: {
+      padding: 14,
+      minHeight: 88,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: 10,
+    },
+    left: {
+      flex: 1,
+      minWidth: 0,
+    },
+    right: {
+      alignItems: 'flex-end',
+      justifyContent: 'center',
+    },
+    label: {
+      color: theme.colors.textMuted,
+      fontSize: 12,
+    },
+    value: {
+      color: theme.colors.textPrimary,
+      fontSize: 20,
+      fontWeight: '700',
+      marginTop: 6,
+    },
+    valueAccent: {
+      color: theme.colors.accent,
+    },
+    footer: {
+      marginTop: 10,
+    },
+  });
+
   return (
     <NeonCard active={active} style={styles.card}>
       <View style={styles.row}>
@@ -37,40 +76,3 @@ export function DashboardTile({
     </NeonCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    padding: 14,
-    minHeight: 88,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  left: {
-    flex: 1,
-    minWidth: 0,
-  },
-  right: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  label: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
-  value: {
-    color: colors.textPrimary,
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 6,
-  },
-  valueAccent: {
-    color: colors.accent,
-  },
-  footer: {
-    marginTop: 10,
-  },
-});
