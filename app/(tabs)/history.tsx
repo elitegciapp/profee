@@ -6,21 +6,21 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { colors, typography, ui } from "@/constants/theme";
 import type { Statement } from "@/src/models/statement";
-import { deleteStatement, listStatements } from "@/src/storage/statementStorage";
+import { deleteStatement, getAllStatements } from "@/src/storage/statements";
 
 export default function HistoryScreen() {
   const router = useRouter();
   const [statements, setStatements] = useState<Statement[]>([]);
 
-  const loadStatements = useCallback(async () => {
-    const all = await listStatements();
-    setStatements(all);
-  }, []);
+  async function loadHistory() {
+    const data = await getAllStatements();
+    setStatements(data);
+  }
 
   useFocusEffect(
     useCallback(() => {
-      loadStatements();
-    }, [loadStatements])
+      loadHistory();
+    }, [])
   );
 
   async function confirmDelete(id: string) {
@@ -34,7 +34,7 @@ export default function HistoryScreen() {
           style: "destructive",
           onPress: async () => {
             await deleteStatement(id);
-            await loadStatements();
+            await loadHistory();
           },
         },
       ]

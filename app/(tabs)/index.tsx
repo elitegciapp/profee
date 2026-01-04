@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
+import * as Crypto from "expo-crypto";
+import { useLocalSearchParams } from "expo-router";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -9,30 +11,38 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { colors, typography, ui } from "@/constants/theme";
 import type { Statement } from "@/src/models/statement";
 import { getFuelProrationStatementAddon } from "@/src/storage/fuelProrationSession";
-import { getLatestStatement, saveStatement as upsertStatement } from "@/src/storage/statementStorage";
+import { getStatementById, upsertStatement } from "@/src/storage/statements";
 import { calculateStatementSummary } from "@/src/utils/calculations";
 import { exportStatementPdf } from "../../src/pdf/exportStatementPdf";
 import { validateStatement } from "../../src/utils/validation";
 
 function createStatementId(): string {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  try {
+    return Crypto.randomUUID();
+  } catch {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
 }
 
-const emptyStatement: Statement = {
-  id: createStatementId(),
-  createdAt: new Date().toISOString(),
-  propertyAddress: "",
-  salePrice: 0,
-  listingCommissionPct: 0,
-  buyerCommissionPct: 0,
-  referralFeePct: 0,
-  deposit: {
-    amount: 0,
-    heldBy: "",
-    creditedToBuyer: false,
-  },
-  teamSplits: [],
-};
+function createEmptyStatement(): Statement {
+  return {
+    id: createStatementId(),
+    createdAt: new Date().toISOString(),
+    propertyAddress: "",
+    salePrice: 0,
+    listingCommissionPct: 0,
+    buyerCommissionPct: 0,
+    referralFeePct: 0,
+    referralFeePercent: 0,
+    referralRecipient: undefined,
+    deposit: {
+      amount: 0,
+      heldBy: "",
+      creditedToBuyer: false,
+    },
+    teamSplits: [],
+  };
+}
 
 function toNumber(text: string): number {
   const next = Number(text.replace(/,/g, ""));
@@ -44,7 +54,8 @@ function money(value: number): string {
 }
 
 export default function FeeStatementScreen() {
-  const [statement, setStatement] = useState<Statement>(() => emptyStatement);
+  const params = useLocalSearchParams<{ id?: string }>();
+  const [statement, setStatement] = useState<Statement>(() => createEmptyStatement());
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   function normalizedStatementForSave(next: Statement): Statement {
@@ -73,6 +84,11 @@ export default function FeeStatementScreen() {
 
     await upsertStatement(next);
     Alert.alert("Saved", "Statement saved successfully.");
+
+    // Prepare a fresh statement so the next Save creates a new History entry.
+    if (!params?.id) {
+      setStatement(createEmptyStatement());
+    }
   }
 
   async function exportPdf() {
@@ -99,18 +115,23 @@ export default function FeeStatementScreen() {
 
   useEffect(() => {
     let isMounted = true;
-    getLatestStatement()
-      .then((latest) => {
+
+    const id = typeof params?.id === "string" ? params.id : undefined;
+    if (!id) return;
+
+    getStatementById(id)
+      .then((found) => {
         if (!isMounted) return;
-        if (latest) setStatement(latest);
+        if (found) setStatement(found);
       })
       .catch(() => {
         // ignore; storage is optional for app startup
       });
+
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [params?.id]);
 
   const summary = calculateStatementSummary(statement);
 

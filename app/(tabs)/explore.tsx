@@ -10,7 +10,7 @@ import { DonutChart } from '@/components/ui/donut-chart';
 import { LineChart } from '@/components/ui/line-chart';
 import { colors, ui } from '@/constants/theme';
 import type { Statement } from '@/src/models/statement';
-import { listStatements } from '@/src/storage/statementStorage';
+import { getAllStatements } from '@/src/storage/statements';
 import { calculateStatementSummary } from '@/src/utils/calculations';
 
 function money(value: number): string {
@@ -24,7 +24,7 @@ export default function ExploreDashboardScreen() {
   const { width: windowWidth } = useWindowDimensions();
 
   const load = useCallback(async () => {
-    const all = await listStatements();
+    const all = await getAllStatements();
     // newest first; keep lightweight
     setStatements(all.slice(0, 20));
   }, []);
