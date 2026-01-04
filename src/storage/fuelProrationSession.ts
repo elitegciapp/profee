@@ -1,13 +1,13 @@
 type FuelProrationSessionState = {
   includeInStatement: boolean;
-  sendFuelOnly: boolean;
+  exportFuelOnly: boolean;
   totalCredit: number;
   totalPercent: number;
 };
 
 let state: FuelProrationSessionState = {
   includeInStatement: false,
-  sendFuelOnly: false,
+  exportFuelOnly: false,
   totalCredit: 0,
   totalPercent: 0,
 };

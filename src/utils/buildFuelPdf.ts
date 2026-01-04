@@ -1,4 +1,4 @@
-import type { FuelOnlyData } from "./buildFuelEmail";
+import type { FuelProrationSummary } from "./buildFuelText";
 
 function clampNumber(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
@@ -9,7 +9,7 @@ function money(value: number): string {
   return `$${value.toFixed(2)}`;
 }
 
-export function buildFuelOnlyHtml(fuel: FuelOnlyData): string {
+export function buildFuelOnlyHtml(fuel: FuelProrationSummary): string {
   const percent = Math.round(clampNumber(fuel.totalPercent, 0, 100));
   const credit = Number.isFinite(fuel.totalCredit) ? Math.max(0, fuel.totalCredit) : 0;
 

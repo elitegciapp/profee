@@ -135,7 +135,7 @@ export default function FuelScreen() {
 
   const [tanks, setTanks] = useState<FuelTank[]>([]);
   const [includeInStatement, setIncludeInStatement] = useState<boolean>(initial.includeInStatement);
-  const [sendFuelOnly, setSendFuelOnly] = useState<boolean>(initial.sendFuelOnly);
+  const [exportFuelOnly, setExportFuelOnly] = useState<boolean>(initial.exportFuelOnly);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [priceInputById, setPriceInputById] = useState<Record<string, string>>({});
 
@@ -157,8 +157,8 @@ export default function FuelScreen() {
   }, [tankResults]);
 
   useEffect(() => {
-    setFuelProrationSession({ includeInStatement, sendFuelOnly, totalCredit, totalPercent });
-  }, [includeInStatement, sendFuelOnly, totalCredit, totalPercent]);
+    setFuelProrationSession({ includeInStatement, exportFuelOnly, totalCredit, totalPercent });
+  }, [includeInStatement, exportFuelOnly, totalCredit, totalPercent]);
 
   function addTank() {
     const id = createId();
@@ -220,19 +220,19 @@ export default function FuelScreen() {
 
           <View style={styles.toggleRow}>
             <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
-              Send only fuel proration
+              Export/copy fuel proration only
             </ThemedText>
-            <View style={[styles.toggleWrap, sendFuelOnly ? styles.toggleWrapOn : undefined]}>
+            <View style={[styles.toggleWrap, exportFuelOnly ? styles.toggleWrapOn : undefined]}>
               <Switch
-                value={sendFuelOnly}
-                onValueChange={setSendFuelOnly}
+                value={exportFuelOnly}
+                onValueChange={setExportFuelOnly}
                 thumbColor={theme.colors.textPrimary}
                 trackColor={{ false: theme.colors.border, true: theme.colors.accentSoft }}
               />
             </View>
           </View>
           <ThemedText style={styles.helperText}>
-            When enabled, Send/Export from Fee Statement will use fuel only.
+            When enabled, Export/Copy from Fee Statement will use fuel only.
           </ThemedText>
         </ThemedView>
 

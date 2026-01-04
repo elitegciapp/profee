@@ -1,10 +1,10 @@
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 
-import type { FuelOnlyData } from "../utils/buildFuelEmail";
+import type { FuelProrationSummary } from "../utils/buildFuelText";
 import { buildFuelOnlyHtml } from "../utils/buildFuelPdf";
 
-export async function exportFuelOnlyPdf(fuel: FuelOnlyData) {
+export async function exportFuelOnlyPdf(fuel: FuelProrationSummary) {
   const html = buildFuelOnlyHtml(fuel);
 
   const result = await Print.printToFileAsync({

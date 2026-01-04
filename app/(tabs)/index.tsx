@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import * as Clipboard from "expo-clipboard";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -16,7 +17,8 @@ import { consumeTitleCompanySelectionForStatement } from "@/src/storage/titleCom
 import { calculateStatementSummary } from "@/src/utils/calculations";
 import { exportStatementPdf } from "../../src/pdf/exportStatementPdf";
 import { exportFuelOnlyPdf } from "../../src/pdf/exportFuelOnlyPdf";
-import { buildFuelEmail } from "../../src/utils/buildFuelEmail";
+import { buildFuelProrationText } from "../../src/utils/buildFuelText";
+import { buildStatementText } from "../../src/utils/buildStatementText";
 import { validateStatement } from "../../src/utils/validation";
 import { useTheme } from "@/src/context/ThemeContext";
 
@@ -65,7 +67,7 @@ export default function FeeStatementScreen() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [fuelSnapshot, setFuelSnapshot] = useState(() => getFuelProrationSession());
 
-  const sendMode: "full" | "fuel-only" = fuelSnapshot.sendFuelOnly ? "fuel-only" : "full";
+  const exportMode: "full" | "fuel-only" = fuelSnapshot.exportFuelOnly ? "fuel-only" : "full";
 
   const styles = StyleSheet.create({
     scroll: {
@@ -228,15 +230,6 @@ export default function FeeStatementScreen() {
     selectorPlaceholder: {
       color: theme.colors.textMuted,
     },
-    sendRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-    },
-    sendButton: {
-      flex: 1,
-      paddingVertical: 12,
-    },
   });
 
   function normalizedStatementForSave(next: Statement): Statement {
@@ -298,7 +291,7 @@ export default function FeeStatementScreen() {
 
     if (!(credit > 0)) {
       Alert.alert(
-        "No fuel proration to send",
+        "No fuel proration available",
         "Go to the Fuel tab, enter the tanks, and calculate a Total Fuel Credit first."
       );
       return null;
@@ -310,38 +303,29 @@ export default function FeeStatementScreen() {
     };
   }
 
-  function sendToTitleCompany() {
-    const email = statement.titleCompany?.email || statement.titleCompanyEmail;
-    if (!email) {
-      Alert.alert("No title company selected", "Select a title company to send to.");
+  async function copySummary() {
+    if (exportMode === "fuel-only") {
+      const fuel = getFuelOnlyDataOrAlert();
+      if (!fuel) return;
+
+      await Clipboard.setStringAsync(buildFuelProrationText(fuel));
+      Alert.alert("Copied", "Fuel proration summary copied to clipboard.");
       return;
     }
 
-    const fuel = sendMode === "fuel-only" ? getFuelOnlyDataOrAlert() : null;
-    if (sendMode === "fuel-only" && !fuel) return;
+    const next = normalizedStatementForSave(statement);
+    const errors = validateStatement(next);
 
-    const subject = encodeURIComponent(sendMode === "fuel-only" ? "Fuel Proration" : "Fee Statement");
-    const body = encodeURIComponent(
-      sendMode === "fuel-only" ? buildFuelEmail(fuel!) : "Please see attached fee statement."
-    );
+    if (errors.length > 0) {
+      Alert.alert(
+        "Cannot copy summary",
+        errors.map((e) => `• ${e.message}`).join("\n")
+      );
+      return;
+    }
 
-    Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`).catch(() => {
-      Alert.alert("Unable to open email", "Please configure an email app and try again.");
-    });
-  }
-
-  function sendFromMyEmail() {
-    const fuel = sendMode === "fuel-only" ? getFuelOnlyDataOrAlert() : null;
-    if (sendMode === "fuel-only" && !fuel) return;
-
-    const subject = encodeURIComponent(sendMode === "fuel-only" ? "Fuel Proration" : "Fee Statement");
-    const body = encodeURIComponent(
-      sendMode === "fuel-only" ? buildFuelEmail(fuel!) : "Please see attached fee statement."
-    );
-
-    Linking.openURL(`mailto:?subject=${subject}&body=${body}`).catch(() => {
-      Alert.alert("Unable to open email", "Please configure an email app and try again.");
-    });
+    await Clipboard.setStringAsync(buildStatementText(next));
+    Alert.alert("Copied", "Statement summary copied to clipboard.");
   }
 
   async function saveStatement() {
@@ -366,7 +350,7 @@ export default function FeeStatementScreen() {
   }
 
   async function exportPdf() {
-    if (sendMode === "fuel-only") {
+    if (exportMode === "fuel-only") {
       const fuel = getFuelOnlyDataOrAlert();
       if (!fuel) return;
 
@@ -454,42 +438,32 @@ export default function FeeStatementScreen() {
             {saveStatus === "saving" ? "Saving…" : "Save"}
           </ThemedText>
         </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          onPress={exportPdf}
-          style={[styles.saveButtonBase, styles.secondaryButton]}
-        >
-          <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
-            {sendMode === "fuel-only" ? "Export Fuel PDF" : "Export PDF"}
-          </ThemedText>
-        </Pressable>
         {saveStatus === "saved" ? <ThemedText style={styles.statusOk}>Saved</ThemedText> : null}
         {saveStatus === "error" ? <ThemedText style={styles.statusBad}>Save failed</ThemedText> : null}
       </ThemedView>
 
-      <ThemedView style={styles.sendRow}>
+      <ThemedView style={styles.actionsRow}>
         <Pressable
           accessibilityRole="button"
-          onPress={sendToTitleCompany}
-          disabled={!(statement.titleCompany?.email || statement.titleCompanyEmail)}
-          style={[
-            styles.secondaryButton,
-            styles.sendButton,
-            !(statement.titleCompany?.email || statement.titleCompanyEmail) ? theme.ui.disabledButton : undefined,
+          onPress={exportPdf}
+          style={({ pressed }) => [
+            styles.saveButtonBase,
+            styles.primaryButton,
+            pressed ? styles.primaryButtonPressed : undefined,
           ]}
         >
-          <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
-            {sendMode === "fuel-only" ? "Send Fuel to Title" : "Send to Title"}
+          <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>
+            {exportMode === "fuel-only" ? "Export Fuel PDF" : "Export PDF"}
           </ThemedText>
         </Pressable>
 
         <Pressable
           accessibilityRole="button"
-          onPress={sendFromMyEmail}
-          style={[styles.secondaryButton, styles.sendButton]}
+          onPress={copySummary}
+          style={[styles.saveButtonBase, styles.secondaryButton]}
         >
           <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
-            {sendMode === "fuel-only" ? "Send Fuel from My Email" : "Send from My Email"}
+            {exportMode === "fuel-only" ? "Copy Fuel Summary" : "Copy Statement"}
           </ThemedText>
         </Pressable>
       </ThemedView>
