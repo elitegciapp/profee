@@ -180,7 +180,7 @@ export default function TitleCompaniesScreen() {
   return (
     <ThemedView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <ThemedText type="title">Title Companies</ThemedText>
+        <ThemedText type="title">Title</ThemedText>
         {isSelectMode ? (
           <ThemedText style={styles.helper}>Tap a company to select it for this statement.</ThemedText>
         ) : (
