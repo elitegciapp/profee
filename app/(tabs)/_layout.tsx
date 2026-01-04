@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -36,29 +37,33 @@ export default function TabLayout() {
   });
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarShowLabel: true,
-        tabBarActiveTintColor: theme.colors.textMuted,
-        tabBarInactiveTintColor: theme.colors.textMuted,
-        tabBarStyle: {
-          backgroundColor: theme.colors.bgPrimary,
-          borderTopColor: theme.colors.border,
-        },
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon focused={focused}>
-              <IconSymbol size={26} name="house.fill" color={theme.colors.textMuted} />
-            </TabIcon>
-          ),
-        }}
-      />
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: theme.colors.bgPrimary }}
+      edges={Platform.OS === 'ios' ? ['top'] : []}
+    >
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarButton: HapticTab,
+          tabBarShowLabel: true,
+          tabBarActiveTintColor: theme.colors.textMuted,
+          tabBarInactiveTintColor: theme.colors.textMuted,
+          tabBarStyle: {
+            backgroundColor: theme.colors.bgPrimary,
+            borderTopColor: theme.colors.border,
+          },
+        }}>
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'Home',
+            tabBarIcon: ({ focused }) => (
+              <TabIcon focused={focused}>
+                <IconSymbol size={26} name="house.fill" color={theme.colors.textMuted} />
+              </TabIcon>
+            ),
+          }}
+        />
 
       <Tabs.Screen
         name="title"
@@ -107,7 +112,8 @@ export default function TabLayout() {
           ),
         }}
       />
-    </Tabs>
+      </Tabs>
+    </SafeAreaView>
   );
 
   function TabIcon({ focused, children }: { focused: boolean; children: React.ReactNode }) {
