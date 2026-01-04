@@ -136,6 +136,8 @@ function buildTheme(colors: Omit<ThemeColors, 'accentSoft' | 'card' | 'success' 
     warning: colors.accent,
   };
 
+  const isDark = derivedColors.bgPrimary === '#0B1220' || derivedColors.bgPrimary === '#0A0A0A';
+
   const nextGlow = {
     shadowColor: derivedColors.accent,
     shadowOpacity: 0.25,
@@ -173,7 +175,7 @@ function buildTheme(colors: Omit<ThemeColors, 'accentSoft' | 'card' | 'success' 
       borderRadius: radius.md,
       padding: 16,
       borderWidth: 1,
-      borderColor: derivedColors.border,
+      borderColor: isDark ? derivedColors.accent : derivedColors.border,
       marginBottom: 16,
     },
     input: {
@@ -220,7 +222,7 @@ function buildTheme(colors: Omit<ThemeColors, 'accentSoft' | 'card' | 'success' 
       borderRadius: radius.md,
       padding: 18,
       borderWidth: 1,
-      borderColor: derivedColors.border,
+      borderColor: isDark ? derivedColors.accent : derivedColors.border,
     },
     divider: {
       height: 1,
