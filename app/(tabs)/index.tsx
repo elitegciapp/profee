@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -7,7 +7,6 @@ import * as Clipboard from "expo-clipboard";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { FintechTile } from "@/components/FintechTile";
-import { NeonInput } from "@/components/ui/neon-input";
 import { NeonCard } from "@/components/ui/neon-card";
 import { SectionHeader } from "@/components/ui/section-header";
 import type { Statement } from "@/src/models/statement";
@@ -60,12 +59,14 @@ function money(value: number): string {
 }
 
 export default function FeeStatementScreen() {
-  const { theme } = useTheme();
+  const { theme, colorScheme } = useTheme();
+  const isDark = colorScheme === "dark";
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const [statement, setStatement] = useState<Statement>(() => createEmptyStatement());
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [fuelSnapshot, setFuelSnapshot] = useState(() => getFuelProrationSession());
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const exportMode: "full" | "fuel-only" = fuelSnapshot.exportFuelOnly ? "fuel-only" : "full";
 
@@ -128,7 +129,7 @@ export default function FeeStatementScreen() {
       borderRadius: 12,
       padding: 4,
       borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderColor: isDark ? theme.colors.borderEmphasis : theme.colors.border,
     },
     toggleWrapOn: {
       borderColor: theme.colors.accent,
@@ -181,7 +182,7 @@ export default function FeeStatementScreen() {
       fontWeight: "700",
       textTransform: "uppercase",
       letterSpacing: 0.8,
-      color: theme.colors.textMuted,
+      color: isDark ? theme.colors.textEmphasis : theme.colors.textPrimary,
       marginBottom: 6,
     },
     fintechInput: {
@@ -193,6 +194,34 @@ export default function FeeStatementScreen() {
       borderWidth: 1,
       borderColor: theme.colors.border,
       fontSize: 14,
+    },
+    fintechInputDark: {
+      borderWidth: 1.5,
+      borderColor: theme.colors.borderEmphasis,
+    },
+    fintechInputFocused: {
+      borderColor: theme.colors.accent,
+      shadowColor: theme.colors.accent,
+      shadowOpacity: isDark ? 0.22 : 0.18,
+      shadowRadius: isDark ? 10 : 8,
+      shadowOffset: { width: 0, height: 0 },
+      ...(Platform.OS === "android" ? { elevation: isDark ? 3 : 2 } : null),
+    },
+    fintechValueEmphasis: {
+      color: theme.colors.textEmphasis,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    fintechMoneyEmphasis: {
+      color: theme.colors.textEmphasis,
+      fontSize: 16,
+      fontWeight: "700",
+      letterSpacing: 0.3,
+    },
+    inlineRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
     },
     netHighlight: {
       marginTop: 12,
@@ -224,8 +253,17 @@ export default function FeeStatementScreen() {
       borderWidth: 1,
       borderColor: theme.colors.border,
     },
+    selectorDark: {
+      borderWidth: 1.5,
+      borderColor: theme.colors.borderEmphasis,
+    },
     selectorText: {
       color: theme.colors.textPrimary,
+    },
+    selectorTextEmphasis: {
+      color: theme.colors.textEmphasis,
+      fontSize: 14,
+      fontWeight: "600",
     },
     selectorPlaceholder: {
       color: theme.colors.textMuted,
@@ -386,6 +424,36 @@ export default function FeeStatementScreen() {
     }
   }
 
+  function clearForm() {
+    Alert.alert("Clear fee statement?", "This will clear all fields in the form.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Clear",
+        style: "destructive",
+        onPress: () => {
+          setFocusedField(null);
+          setSaveStatus("idle");
+          setStatement((prev) => ({
+            id: prev.id,
+            createdAt: prev.createdAt,
+            propertyAddress: "",
+            salePrice: undefined,
+            listingCommissionPct: undefined,
+            buyerCommissionPct: undefined,
+            referralFeePct: undefined,
+            referralFeePercent: undefined,
+            referralRecipient: undefined,
+            deposit: undefined,
+            teamSplits: [],
+            titleCompany: undefined,
+            titleCompanyName: undefined,
+            titleCompanyEmail: undefined,
+          }));
+        },
+      },
+    ]);
+  }
+
   useEffect(() => {
     let isMounted = true;
 
@@ -438,6 +506,21 @@ export default function FeeStatementScreen() {
             {saveStatus === "saving" ? "Saving…" : "Save"}
           </ThemedText>
         </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={clearForm}
+          style={({ pressed }) => [
+            styles.saveButtonBase,
+            styles.primaryButton,
+            pressed ? styles.primaryButtonPressed : undefined,
+          ]}
+        >
+          <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>
+            Clear
+          </ThemedText>
+        </Pressable>
+
         {saveStatus === "saved" ? <ThemedText style={styles.statusOk}>Saved</ThemedText> : null}
         {saveStatus === "error" ? <ThemedText style={styles.statusBad}>Save failed</ThemedText> : null}
       </ThemedView>
@@ -460,9 +543,13 @@ export default function FeeStatementScreen() {
         <Pressable
           accessibilityRole="button"
           onPress={copySummary}
-          style={[styles.saveButtonBase, styles.secondaryButton]}
+          style={({ pressed }) => [
+            styles.saveButtonBase,
+            styles.primaryButton,
+            pressed ? styles.primaryButtonPressed : undefined,
+          ]}
         >
-          <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
+          <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>
             {exportMode === "fuel-only" ? "Copy Fuel Summary" : "Copy Statement"}
           </ThemedText>
         </Pressable>
@@ -470,11 +557,19 @@ export default function FeeStatementScreen() {
 
       <FintechTile title="Fee Statement" subtitle="Commission & disbursement summary">
         <ThemedText style={styles.fintechLabel}>Property address</ThemedText>
-        <NeonInput
+        <TextInput
           value={statement.propertyAddress}
           onChangeText={(text) => setStatement((prev) => ({ ...prev, propertyAddress: text }))}
           placeholder="123 Main St"
-          style={styles.fintechInput}
+          placeholderTextColor={theme.colors.textMuted}
+          onFocus={() => setFocusedField("propertyAddress")}
+          onBlur={() => setFocusedField((prev) => (prev === "propertyAddress" ? null : prev))}
+          style={[
+            styles.fintechInput,
+            isDark ? styles.fintechInputDark : undefined,
+            focusedField === "propertyAddress" ? styles.fintechInputFocused : undefined,
+            isDark ? styles.fintechValueEmphasis : undefined,
+          ]}
         />
 
         <ThemedText style={styles.fintechLabel}>Title Company</ThemedText>
@@ -483,10 +578,14 @@ export default function FeeStatementScreen() {
           onPress={() =>
             router.push({ pathname: "/title" as any, params: { statementId: statement.id } })
           }
-          style={styles.selector}
+          style={[styles.selector, isDark ? styles.selectorDark : undefined]}
         >
           <ThemedText
-            style={statement.titleCompany?.name ? styles.selectorText : styles.selectorPlaceholder}
+            style={
+              statement.titleCompany?.name
+                ? [styles.selectorText, isDark ? styles.selectorTextEmphasis : undefined]
+                : styles.selectorPlaceholder
+            }
           >
             {statement.titleCompany?.name || "Select title company"}
           </ThemedText>
@@ -494,36 +593,58 @@ export default function FeeStatementScreen() {
         </Pressable>
 
         <ThemedText style={styles.fintechLabel}>Sale price</ThemedText>
-        <NeonInput
+        <TextInput
           value={statement.salePrice ? String(statement.salePrice) : ""}
           onChangeText={(text) => setStatement((prev) => ({ ...prev, salePrice: toNumber(text) }))}
           placeholder="0"
           keyboardType="numeric"
-          style={styles.fintechInput}
+          placeholderTextColor={theme.colors.textMuted}
+          onFocus={() => setFocusedField("salePrice")}
+          onBlur={() => setFocusedField((prev) => (prev === "salePrice" ? null : prev))}
+          style={[
+            styles.fintechInput,
+            isDark ? styles.fintechInputDark : undefined,
+            focusedField === "salePrice" ? styles.fintechInputFocused : undefined,
+            isDark ? styles.fintechMoneyEmphasis : undefined,
+          ]}
         />
 
         <ThemedText style={styles.fintechLabel}>Listing commission %</ThemedText>
-        <NeonInput
+        <TextInput
           value={statement.listingCommissionPct ? String(statement.listingCommissionPct) : ""}
           onChangeText={(text) =>
             setStatement((prev) => ({ ...prev, listingCommissionPct: toNumber(text) }))
           }
           placeholder="0"
           keyboardType="numeric"
-          style={styles.fintechInput}
+          placeholderTextColor={theme.colors.textMuted}
+          onFocus={() => setFocusedField("listingCommissionPct")}
+          onBlur={() => setFocusedField((prev) => (prev === "listingCommissionPct" ? null : prev))}
+          style={[
+            styles.fintechInput,
+            isDark ? styles.fintechInputDark : undefined,
+            focusedField === "listingCommissionPct" ? styles.fintechInputFocused : undefined,
+          ]}
         />
 
         <ThemedText style={styles.fintechLabel}>Buyer commission %</ThemedText>
-        <NeonInput
+        <TextInput
           value={statement.buyerCommissionPct ? String(statement.buyerCommissionPct) : ""}
           onChangeText={(text) => setStatement((prev) => ({ ...prev, buyerCommissionPct: toNumber(text) }))}
           placeholder="0"
           keyboardType="numeric"
-          style={styles.fintechInput}
+          placeholderTextColor={theme.colors.textMuted}
+          onFocus={() => setFocusedField("buyerCommissionPct")}
+          onBlur={() => setFocusedField((prev) => (prev === "buyerCommissionPct" ? null : prev))}
+          style={[
+            styles.fintechInput,
+            isDark ? styles.fintechInputDark : undefined,
+            focusedField === "buyerCommissionPct" ? styles.fintechInputFocused : undefined,
+          ]}
         />
 
         <ThemedText style={styles.fintechLabel}>Referral fee %</ThemedText>
-        <NeonInput
+        <TextInput
           value={statement.referralFeePct?.toString() ?? ""}
           onChangeText={(text) =>
             setStatement((prev) => ({
@@ -535,13 +656,21 @@ export default function FeeStatementScreen() {
           }
           placeholder="0"
           keyboardType="numeric"
-          style={styles.fintechInput}
+          placeholderTextColor={theme.colors.textMuted}
+          onFocus={() => setFocusedField("referralFeePct")}
+          onBlur={() => setFocusedField((prev) => (prev === "referralFeePct" ? null : prev))}
+          style={[
+            styles.fintechInput,
+            isDark ? styles.fintechInputDark : undefined,
+            focusedField === "referralFeePct" ? styles.fintechInputFocused : undefined,
+            isDark ? styles.fintechValueEmphasis : undefined,
+          ]}
         />
 
         {Number(statement.referralFeePct ?? statement.referralFeePercent ?? 0) > 0 ? (
           <>
             <ThemedText style={styles.fintechLabel}>Referral Paid To</ThemedText>
-            <NeonInput
+            <TextInput
               value={statement.referralRecipient ?? ""}
               onChangeText={(text) =>
                 setStatement((prev) => ({
@@ -551,7 +680,14 @@ export default function FeeStatementScreen() {
               }
               placeholder="Referral agent or brokerage"
               autoCapitalize="words"
-              style={styles.fintechInput}
+              placeholderTextColor={theme.colors.textMuted}
+              onFocus={() => setFocusedField("referralRecipient")}
+              onBlur={() => setFocusedField((prev) => (prev === "referralRecipient" ? null : prev))}
+              style={[
+                styles.fintechInput,
+                isDark ? styles.fintechInputDark : undefined,
+                focusedField === "referralRecipient" ? styles.fintechInputFocused : undefined,
+              ]}
             />
           </>
         ) : null}
@@ -559,7 +695,7 @@ export default function FeeStatementScreen() {
         <SectionHeader title="Deposit" />
 
         <ThemedText style={styles.fintechLabel}>Deposit amount</ThemedText>
-        <NeonInput
+        <TextInput
           value={statement.deposit?.amount?.toString() ?? ""}
           onChangeText={(text) =>
             setStatement((prev) => ({
@@ -573,11 +709,19 @@ export default function FeeStatementScreen() {
           }
           placeholder="0"
           keyboardType="numeric"
-          style={styles.fintechInput}
+          placeholderTextColor={theme.colors.textMuted}
+          onFocus={() => setFocusedField("depositAmount")}
+          onBlur={() => setFocusedField((prev) => (prev === "depositAmount" ? null : prev))}
+          style={[
+            styles.fintechInput,
+            isDark ? styles.fintechInputDark : undefined,
+            focusedField === "depositAmount" ? styles.fintechInputFocused : undefined,
+            isDark ? styles.fintechMoneyEmphasis : undefined,
+          ]}
         />
 
         <ThemedText style={styles.fintechLabel}>Held by</ThemedText>
-        <NeonInput
+        <TextInput
           value={statement.deposit?.heldBy ?? ""}
           onChangeText={(text) =>
             setStatement((prev) => ({
@@ -590,32 +734,48 @@ export default function FeeStatementScreen() {
             }))
           }
           placeholder="Title Company / Brokerage"
-          style={styles.fintechInput}
+          placeholderTextColor={theme.colors.textMuted}
+          onFocus={() => setFocusedField("heldBy")}
+          onBlur={() => setFocusedField((prev) => (prev === "heldBy" ? null : prev))}
+          style={[
+            styles.fintechInput,
+            isDark ? styles.fintechInputDark : undefined,
+            focusedField === "heldBy" ? styles.fintechInputFocused : undefined,
+            isDark ? styles.fintechValueEmphasis : undefined,
+          ]}
         />
 
         <View style={styles.row}>
           <ThemedText style={styles.fintechLabel}>Credited to buyer</ThemedText>
-          <View
-            style={[
-              styles.toggleWrap,
-              statement.deposit?.creditedToBuyer ? styles.toggleWrapOn : undefined,
-            ]}
-          >
-            <Switch
-              value={statement.deposit?.creditedToBuyer ?? false}
-              thumbColor={theme.colors.textPrimary}
-              trackColor={{ false: theme.colors.border, true: theme.colors.accentSoft }}
-              onValueChange={(value) =>
-                setStatement((prev) => ({
-                  ...prev,
-                  deposit: {
-                    amount: prev.deposit?.amount ?? 0,
-                    heldBy: prev.deposit?.heldBy ?? "",
-                    creditedToBuyer: value,
-                  },
-                }))
-              }
-            />
+          <View style={styles.inlineRow}>
+            {isDark ? (
+              <ThemedText style={styles.fintechValueEmphasis}>
+                {statement.deposit?.creditedToBuyer ? "Yes" : "No"}
+              </ThemedText>
+            ) : null}
+
+            <View
+              style={[
+                styles.toggleWrap,
+                statement.deposit?.creditedToBuyer ? styles.toggleWrapOn : undefined,
+              ]}
+            >
+              <Switch
+                value={statement.deposit?.creditedToBuyer ?? false}
+                thumbColor={theme.colors.textPrimary}
+                trackColor={{ false: theme.colors.border, true: theme.colors.accentSoft }}
+                onValueChange={(value) =>
+                  setStatement((prev) => ({
+                    ...prev,
+                    deposit: {
+                      amount: prev.deposit?.amount ?? 0,
+                      heldBy: prev.deposit?.heldBy ?? "",
+                      creditedToBuyer: value,
+                    },
+                  }))
+                }
+              />
+            </View>
           </View>
         </View>
 
@@ -623,10 +783,18 @@ export default function FeeStatementScreen() {
 
         {(statement.teamSplits ?? []).map((split, index) => (
           <View key={split.id ?? `${index}`} style={styles.splitRow}>
-            <NeonInput
-              style={[styles.fintechInput, styles.splitName]}
+            <TextInput
+              style={[
+                styles.fintechInput,
+                isDark ? styles.fintechInputDark : undefined,
+                focusedField === `splitName-${index}` ? styles.fintechInputFocused : undefined,
+                styles.splitName,
+              ]}
               placeholder="Agent name"
               value={split.name}
+              placeholderTextColor={theme.colors.textMuted}
+              onFocus={() => setFocusedField(`splitName-${index}`)}
+              onBlur={() => setFocusedField((prev) => (prev === `splitName-${index}` ? null : prev))}
               onChangeText={(text) =>
                 setStatement((prev) => {
                   const current = prev.teamSplits ?? [];
@@ -637,11 +805,19 @@ export default function FeeStatementScreen() {
               }
             />
 
-            <NeonInput
-              style={[styles.fintechInput, styles.splitPct]}
+            <TextInput
+              style={[
+                styles.fintechInput,
+                isDark ? styles.fintechInputDark : undefined,
+                focusedField === `splitPct-${index}` ? styles.fintechInputFocused : undefined,
+                styles.splitPct,
+              ]}
               placeholder="%"
               keyboardType="numeric"
               value={String(split.percentage ?? 0)}
+              placeholderTextColor={theme.colors.textMuted}
+              onFocus={() => setFocusedField(`splitPct-${index}`)}
+              onBlur={() => setFocusedField((prev) => (prev === `splitPct-${index}` ? null : prev))}
               onChangeText={(text) =>
                 setStatement((prev) => {
                   const current = prev.teamSplits ?? [];

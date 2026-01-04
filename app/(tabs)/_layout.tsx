@@ -59,17 +59,6 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon focused={focused}>
-              <IconSymbol size={26} name="paperplane.fill" color={theme.colors.textMuted} />
-            </TabIcon>
-          ),
-        }}
-      />
 
       <Tabs.Screen
         name="title"
@@ -102,6 +91,18 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => (
             <TabIcon focused={focused}>
               <IconSymbol size={26} name="clock.fill" color={theme.colors.textMuted} />
+            </TabIcon>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused}>
+              <IconSymbol size={26} name="gearshape.fill" color={theme.colors.textMuted} />
             </TabIcon>
           ),
         }}

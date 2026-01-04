@@ -5,6 +5,10 @@ type ThemeColors = {
   bgSecondary: string;
   border: string;
 
+  // Dark-mode emphasis tokens
+  textEmphasis: string;
+  borderEmphasis: string;
+
   textPrimary: string;
   textSecondary: string;
   textMuted: string;
@@ -127,16 +131,20 @@ const radius = {
   lg: 16,
 } as const;
 
-function buildTheme(colors: Omit<ThemeColors, 'accentSoft' | 'card' | 'success' | 'warning'>): ThemeTokens {
+function buildTheme(
+  colors: Omit<ThemeColors, 'accentSoft' | 'card' | 'success' | 'warning' | 'textEmphasis' | 'borderEmphasis'>
+): ThemeTokens {
+  const isDark = colors.bgPrimary === '#0B1220' || colors.bgPrimary === '#0A0A0A';
+
   const derivedColors: ThemeColors = {
     ...colors,
+    textEmphasis: isDark ? '#FFFFFF' : colors.textPrimary,
+    borderEmphasis: isDark ? '#38BDF8' : colors.border,
     accentSoft: 'rgba(0, 229, 255, 0.15)',
     card: colors.bgSecondary,
     success: colors.accent,
     warning: colors.accent,
   };
-
-  const isDark = derivedColors.bgPrimary === '#0B1220' || derivedColors.bgPrimary === '#0A0A0A';
 
   const nextGlow = {
     shadowColor: derivedColors.accent,
@@ -184,8 +192,8 @@ function buildTheme(colors: Omit<ThemeColors, 'accentSoft' | 'card' | 'success' 
       paddingHorizontal: 12,
       paddingVertical: 10,
       color: derivedColors.textPrimary,
-      borderWidth: 1,
-      borderColor: derivedColors.border,
+      borderWidth: isDark ? 1.5 : 1,
+      borderColor: isDark ? derivedColors.borderEmphasis : derivedColors.border,
     },
     inputFocused: {
       borderColor: derivedColors.accent,

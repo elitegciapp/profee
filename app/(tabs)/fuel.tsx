@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
-
-import { FuelGauge } from "@/components/FuelGauge";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { NeonInput } from "@/components/ui/neon-input";
@@ -21,7 +19,8 @@ function formatMoney(value: number): string {
 }
 
 export default function FuelScreen() {
-  const { theme } = useTheme();
+  const { theme, colorScheme } = useTheme();
+  const isDark = colorScheme === "dark";
   const initial = getFuelProrationSession();
 
   const styles = StyleSheet.create({
@@ -58,7 +57,7 @@ export default function FuelScreen() {
       fontSize: 12,
     },
     fieldLabel: {
-      color: theme.colors.textSecondary,
+      color: isDark ? theme.colors.textEmphasis : theme.colors.textPrimary,
     },
     cardHeaderRow: {
       flexDirection: "row",
@@ -73,7 +72,7 @@ export default function FuelScreen() {
       borderRadius: 12,
       padding: 4,
       borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderColor: isDark ? theme.colors.borderEmphasis : theme.colors.border,
     },
     toggleWrapOn: {
       borderColor: theme.colors.accent,
@@ -98,7 +97,7 @@ export default function FuelScreen() {
       justifyContent: "space-between",
     },
     creditLabel: {
-      color: theme.colors.textSecondary,
+      color: isDark ? theme.colors.textEmphasis : theme.colors.textPrimary,
     },
     creditValue: {
       color: theme.colors.textPrimary,
@@ -114,11 +113,11 @@ export default function FuelScreen() {
       borderRadius: theme.radius.lg,
       padding: 18,
       borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderColor: isDark ? theme.colors.borderEmphasis : theme.colors.border,
       backgroundColor: theme.colors.card,
     },
     totalLabel: {
-      color: theme.colors.textSecondary,
+      color: isDark ? theme.colors.textEmphasis : theme.colors.textPrimary,
       fontSize: 12,
       fontWeight: "700",
       letterSpacing: 0.4,
@@ -136,7 +135,6 @@ export default function FuelScreen() {
   const [tanks, setTanks] = useState<FuelTank[]>([]);
   const [includeInStatement, setIncludeInStatement] = useState<boolean>(initial.includeInStatement);
   const [exportFuelOnly, setExportFuelOnly] = useState<boolean>(initial.exportFuelOnly);
-  const [scrollEnabled, setScrollEnabled] = useState(true);
   const [priceInputById, setPriceInputById] = useState<Record<string, string>>({});
 
   const { tankResults, totalCredit } = useMemo(() => calculateFuelProration(tanks), [tanks]);
@@ -192,7 +190,6 @@ export default function FuelScreen() {
   return (
     <ThemedView style={styles.screen}>
       <ScrollView
-        scrollEnabled={scrollEnabled}
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
@@ -250,23 +247,6 @@ export default function FuelScreen() {
                 <ThemedText style={styles.removeText}>✕</ThemedText>
               </Pressable>
             </View>
-
-            <FuelGauge
-              percent={
-                tank.percentFull ??
-                (tank.capacityGallons > 0 ? (tank.currentGallons / tank.capacityGallons) * 100 : 0)
-              }
-              capacity={tank.capacityGallons}
-              pricePerGallon={tank.pricePerGallon}
-              onChange={(percent, gallons) =>
-                updateTank(tank.id, {
-                  percentFull: percent,
-                  currentGallons: gallons,
-                })
-              }
-              onDragStart={() => setScrollEnabled(false)}
-              onDragEnd={() => setScrollEnabled(true)}
-            />
 
             <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
               Tank capacity (gal)

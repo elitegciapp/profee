@@ -11,6 +11,8 @@ export function NeonInput({ style, error = false, onFocus, onBlur, ...rest }: Pr
   const [focused, setFocused] = useState(false);
   const { theme } = useTheme();
 
+  const isDark = theme.colors.bgPrimary === '#0B1220' || theme.colors.bgPrimary === '#0A0A0A';
+
   const styles = StyleSheet.create({
     base: {
       ...theme.ui.input,
@@ -22,13 +24,13 @@ export function NeonInput({ style, error = false, onFocus, onBlur, ...rest }: Pr
       ...(Platform.OS === 'ios'
         ? {
             shadowColor: theme.colors.accent,
-            shadowOpacity: 0.18,
-            shadowRadius: 8,
+            shadowOpacity: isDark ? 0.22 : 0.18,
+            shadowRadius: isDark ? 10 : 8,
             shadowOffset: { width: 0, height: 0 },
           }
         : {
             // Android doesn't support shadowColor reliably on Views in all cases
-            elevation: 0,
+            elevation: isDark ? 3 : 2,
           }),
       backgroundColor: theme.colors.bgSecondary,
     },
