@@ -10,11 +10,13 @@ import { NeonInput } from "@/components/ui/neon-input";
 import { NeonCard } from "@/components/ui/neon-card";
 import { SectionHeader } from "@/components/ui/section-header";
 import type { Statement } from "@/src/models/statement";
-import { getFuelProrationStatementAddon } from "@/src/storage/fuelProrationSession";
+import { getFuelProrationSession, getFuelProrationStatementAddon } from "@/src/storage/fuelProrationSession";
 import { getStatementById, upsertStatement } from "@/src/storage/statements";
 import { consumeTitleCompanySelectionForStatement } from "@/src/storage/titleCompanySelection";
 import { calculateStatementSummary } from "@/src/utils/calculations";
 import { exportStatementPdf } from "../../src/pdf/exportStatementPdf";
+import { exportFuelOnlyPdf } from "../../src/pdf/exportFuelOnlyPdf";
+import { buildFuelEmail } from "../../src/utils/buildFuelEmail";
 import { validateStatement } from "../../src/utils/validation";
 import { useTheme } from "@/src/context/ThemeContext";
 
@@ -61,6 +63,8 @@ export default function FeeStatementScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const [statement, setStatement] = useState<Statement>(() => createEmptyStatement());
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [sendMode, setSendMode] = useState<"full" | "fuel-only">("full");
+  const [fuelSnapshot, setFuelSnapshot] = useState(() => getFuelProrationSession());
 
   const styles = StyleSheet.create({
     scroll: {
@@ -278,6 +282,33 @@ export default function FeeStatementScreen() {
     }, [statement.id])
   );
 
+  useFocusEffect(
+    useCallback(() => {
+      setFuelSnapshot(getFuelProrationSession());
+    }, [])
+  );
+
+  function getFuelOnlyDataOrAlert(): { totalCredit: number; totalPercent: number } | null {
+    const snapshot = getFuelProrationSession();
+    setFuelSnapshot(snapshot);
+
+    const credit = Number.isFinite(snapshot.totalCredit) ? snapshot.totalCredit : 0;
+    const percent = Number.isFinite(snapshot.totalPercent) ? snapshot.totalPercent : 0;
+
+    if (!(credit > 0)) {
+      Alert.alert(
+        "No fuel proration to send",
+        "Go to the Fuel tab, enter the tanks, and calculate a Total Fuel Credit first."
+      );
+      return null;
+    }
+
+    return {
+      totalCredit: credit,
+      totalPercent: Math.max(0, Math.min(100, percent)),
+    };
+  }
+
   function sendToTitleCompany() {
     const email = statement.titleCompany?.email || statement.titleCompanyEmail;
     if (!email) {
@@ -285,8 +316,13 @@ export default function FeeStatementScreen() {
       return;
     }
 
-    const subject = encodeURIComponent("Fee Statement");
-    const body = encodeURIComponent("Please see attached fee statement.");
+    const fuel = sendMode === "fuel-only" ? getFuelOnlyDataOrAlert() : null;
+    if (sendMode === "fuel-only" && !fuel) return;
+
+    const subject = encodeURIComponent(sendMode === "fuel-only" ? "Fuel Proration" : "Fee Statement");
+    const body = encodeURIComponent(
+      sendMode === "fuel-only" ? buildFuelEmail(fuel!) : "Please see attached fee statement."
+    );
 
     Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`).catch(() => {
       Alert.alert("Unable to open email", "Please configure an email app and try again.");
@@ -294,8 +330,13 @@ export default function FeeStatementScreen() {
   }
 
   function sendFromMyEmail() {
-    const subject = encodeURIComponent("Fee Statement");
-    const body = encodeURIComponent("Please see attached fee statement.");
+    const fuel = sendMode === "fuel-only" ? getFuelOnlyDataOrAlert() : null;
+    if (sendMode === "fuel-only" && !fuel) return;
+
+    const subject = encodeURIComponent(sendMode === "fuel-only" ? "Fuel Proration" : "Fee Statement");
+    const body = encodeURIComponent(
+      sendMode === "fuel-only" ? buildFuelEmail(fuel!) : "Please see attached fee statement."
+    );
 
     Linking.openURL(`mailto:?subject=${subject}&body=${body}`).catch(() => {
       Alert.alert("Unable to open email", "Please configure an email app and try again.");
@@ -324,6 +365,21 @@ export default function FeeStatementScreen() {
   }
 
   async function exportPdf() {
+    if (sendMode === "fuel-only") {
+      const fuel = getFuelOnlyDataOrAlert();
+      if (!fuel) return;
+
+      try {
+        await exportFuelOnlyPdf(fuel);
+      } catch {
+        Alert.alert(
+          "Export failed",
+          "Unable to generate or share the PDF. Please try again."
+        );
+      }
+      return;
+    }
+
     const next = normalizedStatementForSave(statement);
     const errors = validateStatement(next);
 
@@ -402,11 +458,43 @@ export default function FeeStatementScreen() {
           onPress={exportPdf}
           style={[styles.saveButtonBase, styles.secondaryButton]}
         >
-          <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Export PDF</ThemedText>
+          <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
+            {sendMode === "fuel-only" ? "Export Fuel PDF" : "Export PDF"}
+          </ThemedText>
         </Pressable>
         {saveStatus === "saved" ? <ThemedText style={styles.statusOk}>Saved</ThemedText> : null}
         {saveStatus === "error" ? <ThemedText style={styles.statusBad}>Save failed</ThemedText> : null}
       </ThemedView>
+
+      <NeonCard active style={styles.section}>
+        <SectionHeader title="Fuel Proration" />
+
+        <View style={styles.row}>
+          <ThemedText style={styles.fieldLabel}>Fuel Level</ThemedText>
+          <ThemedText style={styles.fieldLabel}>
+            {Math.round(Number.isFinite(fuelSnapshot.totalPercent) ? fuelSnapshot.totalPercent : 0)}%
+          </ThemedText>
+        </View>
+
+        <View style={styles.row}>
+          <ThemedText style={styles.fieldLabel}>Total Fuel Credit</ThemedText>
+          <ThemedText style={styles.fieldLabel}>
+            {money(Number.isFinite(fuelSnapshot.totalCredit) ? fuelSnapshot.totalCredit : 0)}
+          </ThemedText>
+        </View>
+
+        <View style={styles.row}>
+          <ThemedText style={styles.fieldLabel}>Send only fuel proration</ThemedText>
+          <View style={[styles.toggleWrap, sendMode === "fuel-only" ? styles.toggleWrapOn : undefined]}>
+            <Switch
+              value={sendMode === "fuel-only"}
+              thumbColor={theme.colors.textPrimary}
+              trackColor={{ false: theme.colors.border, true: theme.colors.accentSoft }}
+              onValueChange={(value) => setSendMode(value ? "fuel-only" : "full")}
+            />
+          </View>
+        </View>
+      </NeonCard>
 
       <ThemedView style={styles.sendRow}>
         <Pressable
@@ -420,7 +508,7 @@ export default function FeeStatementScreen() {
           ]}
         >
           <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
-            Send to Title
+            {sendMode === "fuel-only" ? "Send Fuel to Title" : "Send to Title"}
           </ThemedText>
         </Pressable>
 
@@ -430,7 +518,7 @@ export default function FeeStatementScreen() {
           style={[styles.secondaryButton, styles.sendButton]}
         >
           <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
-            Send from My Email
+            {sendMode === "fuel-only" ? "Send Fuel from My Email" : "Send from My Email"}
           </ThemedText>
         </Pressable>
       </ThemedView>
