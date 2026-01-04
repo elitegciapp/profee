@@ -123,6 +123,16 @@ export function buildStatementHtml(
   </div>
 
   <div class="row">
+    <div class="label">Title Company</div>
+    <div class="value">${escapeHtml(statement.titleCompany?.name || statement.titleCompanyName || "—")}</div>
+  </div>
+
+  <div class="row">
+    <div class="label">Title Email</div>
+    <div class="value">${escapeHtml(statement.titleCompany?.email || statement.titleCompanyEmail || "—")}</div>
+  </div>
+
+  <div class="row">
     <div class="label">Listing commission</div>
     <div class="value">${money(summary.listingCommissionAmount)}</div>
   </div>

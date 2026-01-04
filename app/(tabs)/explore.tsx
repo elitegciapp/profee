@@ -162,6 +162,40 @@ export default function ExploreDashboardScreen() {
           <ThemedText style={styles.subtle}>Portfolio-style snapshot from saved statements</ThemedText>
         </View>
 
+        <View style={styles.appearanceCard}>
+          <ThemedText style={styles.appearanceLabel}>Appearance</ThemedText>
+
+          <View style={styles.toggleRow}>
+            <ThemedText>System</ThemedText>
+            <Switch
+              value={mode === 'system'}
+              onValueChange={(value) => {
+                if (value) setMode('system');
+              }}
+            />
+          </View>
+
+          <View style={styles.toggleRow}>
+            <ThemedText>Light</ThemedText>
+            <Switch
+              value={mode === 'light'}
+              onValueChange={(value) => {
+                if (value) setMode('light');
+              }}
+            />
+          </View>
+
+          <View style={styles.toggleRow}>
+            <ThemedText>Dark</ThemedText>
+            <Switch
+              value={mode === 'dark'}
+              onValueChange={(value) => {
+                if (value) setMode('dark');
+              }}
+            />
+          </View>
+        </View>
+
         <View style={styles.tilesGrid}>
           <DashboardTile
             label="Total Volume"
@@ -214,24 +248,6 @@ export default function ExploreDashboardScreen() {
           )}
         </View>
 
-        <View style={styles.appearanceCard}>
-          <ThemedText style={styles.appearanceLabel}>Appearance</ThemedText>
-
-          <View style={styles.toggleRow}>
-            <ThemedText>System</ThemedText>
-            <Switch value={mode === 'system'} onValueChange={() => setMode('system')} />
-          </View>
-
-          <View style={styles.toggleRow}>
-            <ThemedText>Light</ThemedText>
-            <Switch value={mode === 'light'} onValueChange={() => setMode('light')} />
-          </View>
-
-          <View style={styles.toggleRow}>
-            <ThemedText>Dark</ThemedText>
-            <Switch value={mode === 'dark'} onValueChange={() => setMode('dark')} />
-          </View>
-        </View>
       </ScrollView>
     </ThemedView>
   );

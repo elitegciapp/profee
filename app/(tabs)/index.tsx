@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import * as Crypto from "expo-crypto";
-import { useLocalSearchParams } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -11,6 +11,7 @@ import { SectionHeader } from "@/components/ui/section-header";
 import type { Statement } from "@/src/models/statement";
 import { getFuelProrationStatementAddon } from "@/src/storage/fuelProrationSession";
 import { getStatementById, upsertStatement } from "@/src/storage/statements";
+import { consumeTitleCompanySelectionForStatement } from "@/src/storage/titleCompanySelection";
 import { calculateStatementSummary } from "@/src/utils/calculations";
 import { exportStatementPdf } from "../../src/pdf/exportStatementPdf";
 import { validateStatement } from "../../src/utils/validation";
@@ -55,6 +56,7 @@ function money(value: number): string {
 
 export default function FeeStatementScreen() {
   const { theme } = useTheme();
+  const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const [statement, setStatement] = useState<Statement>(() => createEmptyStatement());
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -166,18 +168,96 @@ export default function FeeStatementScreen() {
     fieldLabel: {
       color: theme.colors.textSecondary,
     },
+    selector: {
+      ...theme.ui.input,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 12,
+    },
+    selectorText: {
+      color: theme.colors.textPrimary,
+    },
+    selectorPlaceholder: {
+      color: theme.colors.textMuted,
+    },
+    sendRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    sendButton: {
+      flex: 1,
+      paddingVertical: 12,
+    },
   });
 
   function normalizedStatementForSave(next: Statement): Statement {
     const referralFeePercent = next.referralFeePercent ?? next.referralFeePct ?? 0;
     const referralRecipient = next.referralRecipient?.trim() || undefined;
 
+    const titleCompanyName = next.titleCompany?.name?.trim() || next.titleCompanyName;
+    const titleCompanyEmail = next.titleCompany?.email?.trim() || next.titleCompanyEmail;
+
     return {
       ...next,
       referralFeePct: next.referralFeePct ?? referralFeePercent,
       referralFeePercent,
       referralRecipient: referralFeePercent > 0 ? referralRecipient : undefined,
+
+      titleCompanyName,
+      titleCompanyEmail,
     };
+  }
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      consumeTitleCompanySelectionForStatement(statement.id)
+        .then((company) => {
+          if (!isActive) return;
+          if (!company) return;
+
+          setStatement((prev) => ({
+            ...prev,
+            titleCompany: company,
+            titleCompanyName: company.name,
+            titleCompanyEmail: company.email,
+          }));
+        })
+        .catch(() => {
+          // ignore selection failures
+        });
+
+      return () => {
+        isActive = false;
+      };
+    }, [statement.id])
+  );
+
+  function sendToTitleCompany() {
+    const email = statement.titleCompany?.email || statement.titleCompanyEmail;
+    if (!email) {
+      Alert.alert("No title company selected", "Select a title company to send to.");
+      return;
+    }
+
+    const subject = encodeURIComponent("Fee Statement");
+    const body = encodeURIComponent("Please see attached fee statement.");
+
+    Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`).catch(() => {
+      Alert.alert("Unable to open email", "Please configure an email app and try again.");
+    });
+  }
+
+  function sendFromMyEmail() {
+    const subject = encodeURIComponent("Fee Statement");
+    const body = encodeURIComponent("Please see attached fee statement.");
+
+    Linking.openURL(`mailto:?subject=${subject}&body=${body}`).catch(() => {
+      Alert.alert("Unable to open email", "Please configure an email app and try again.");
+    });
   }
 
   async function saveStatement() {
@@ -286,6 +366,33 @@ export default function FeeStatementScreen() {
         {saveStatus === "error" ? <ThemedText style={styles.statusBad}>Save failed</ThemedText> : null}
       </ThemedView>
 
+      <ThemedView style={styles.sendRow}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={sendToTitleCompany}
+          disabled={!(statement.titleCompany?.email || statement.titleCompanyEmail)}
+          style={[
+            styles.secondaryButton,
+            styles.sendButton,
+            !(statement.titleCompany?.email || statement.titleCompanyEmail) ? theme.ui.disabledButton : undefined,
+          ]}
+        >
+          <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
+            Send to Title
+          </ThemedText>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={sendFromMyEmail}
+          style={[styles.secondaryButton, styles.sendButton]}
+        >
+          <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
+            Send from My Email
+          </ThemedText>
+        </Pressable>
+      </ThemedView>
+
       <ThemedView style={styles.section}>
         <ThemedText type="subtitle">Statement</ThemedText>
 
@@ -296,6 +403,22 @@ export default function FeeStatementScreen() {
           placeholder="123 Main St"
           style={styles.input}
         />
+
+        <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Title Company</ThemedText>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() =>
+            router.push({ pathname: "/title" as any, params: { statementId: statement.id } })
+          }
+          style={styles.selector}
+        >
+          <ThemedText
+            style={statement.titleCompany?.name ? styles.selectorText : styles.selectorPlaceholder}
+          >
+            {statement.titleCompany?.name || "Select title company"}
+          </ThemedText>
+          <ThemedText style={styles.selectorPlaceholder}>›</ThemedText>
+        </Pressable>
 
         <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Sale price</ThemedText>
         <NeonInput

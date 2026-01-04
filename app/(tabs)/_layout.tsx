@@ -72,6 +72,18 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
+        name="title"
+        options={{
+          title: 'Title',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused}>
+              <IconSymbol size={26} name="building.2.fill" color={theme.colors.textMuted} />
+            </TabIcon>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="fuel"
         options={{
           title: 'Fuel',

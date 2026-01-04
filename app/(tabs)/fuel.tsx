@@ -122,12 +122,14 @@ export default function FuelScreen() {
       fontSize: 12,
       fontWeight: "700",
       letterSpacing: 0.4,
+      lineHeight: 16,
     },
     totalValue: {
       color: theme.colors.accent,
       fontSize: 22,
       fontWeight: "800",
       marginTop: 6,
+      lineHeight: 28,
     },
   });
 

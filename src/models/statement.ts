@@ -1,3 +1,5 @@
+import type { TitleCompany } from "./titleCompany";
+
 export interface Deposit {
   amount: number;
   heldBy: string;
@@ -27,6 +29,8 @@ export interface Statement {
   deposit?: Deposit;
 
   teamSplits?: TeamSplit[];
+
+  titleCompany?: TitleCompany;
 
   titleCompanyName?: string;
   titleCompanyEmail?: string;
