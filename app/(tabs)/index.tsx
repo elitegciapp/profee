@@ -5,6 +5,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { FintechTile } from "@/components/FintechTile";
 import { NeonInput } from "@/components/ui/neon-input";
 import { NeonCard } from "@/components/ui/neon-card";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -168,12 +169,53 @@ export default function FeeStatementScreen() {
     fieldLabel: {
       color: theme.colors.textSecondary,
     },
+    fintechLabel: {
+      fontSize: 11,
+      fontWeight: "700",
+      textTransform: "uppercase",
+      letterSpacing: 0.8,
+      color: theme.colors.textMuted,
+      marginBottom: 6,
+    },
+    fintechInput: {
+      backgroundColor: theme.colors.bgSecondary,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      color: theme.colors.textPrimary,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      fontSize: 14,
+    },
+    netHighlight: {
+      marginTop: 12,
+      padding: 12,
+      borderRadius: 12,
+      backgroundColor: theme.colors.bgPrimary,
+      borderWidth: 1,
+      borderColor: theme.colors.accent,
+    },
+    netHighlightLabel: {
+      color: theme.colors.textMuted,
+      fontSize: 12,
+    },
+    netHighlightValue: {
+      color: theme.colors.accent,
+      fontSize: 20,
+      fontWeight: "800",
+      letterSpacing: 0.4,
+      marginTop: 4,
+    },
     selector: {
-      ...theme.ui.input,
+      backgroundColor: theme.colors.bgSecondary,
+      borderRadius: 12,
+      paddingHorizontal: 14,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
       paddingVertical: 12,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
     },
     selectorText: {
       color: theme.colors.textPrimary,
@@ -393,18 +435,16 @@ export default function FeeStatementScreen() {
         </Pressable>
       </ThemedView>
 
-      <ThemedView style={styles.section}>
-        <ThemedText type="subtitle">Statement</ThemedText>
-
-        <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Property address</ThemedText>
+      <FintechTile title="Fee Statement" subtitle="Commission & disbursement summary">
+        <ThemedText style={styles.fintechLabel}>Property address</ThemedText>
         <NeonInput
           value={statement.propertyAddress}
           onChangeText={(text) => setStatement((prev) => ({ ...prev, propertyAddress: text }))}
           placeholder="123 Main St"
-          style={styles.input}
+          style={styles.fintechInput}
         />
 
-        <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Title Company</ThemedText>
+        <ThemedText style={styles.fintechLabel}>Title Company</ThemedText>
         <Pressable
           accessibilityRole="button"
           onPress={() =>
@@ -420,16 +460,16 @@ export default function FeeStatementScreen() {
           <ThemedText style={styles.selectorPlaceholder}>›</ThemedText>
         </Pressable>
 
-        <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Sale price</ThemedText>
+        <ThemedText style={styles.fintechLabel}>Sale price</ThemedText>
         <NeonInput
           value={statement.salePrice ? String(statement.salePrice) : ""}
           onChangeText={(text) => setStatement((prev) => ({ ...prev, salePrice: toNumber(text) }))}
           placeholder="0"
           keyboardType="numeric"
-          style={styles.input}
+          style={styles.fintechInput}
         />
 
-        <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Listing commission %</ThemedText>
+        <ThemedText style={styles.fintechLabel}>Listing commission %</ThemedText>
         <NeonInput
           value={statement.listingCommissionPct ? String(statement.listingCommissionPct) : ""}
           onChangeText={(text) =>
@@ -437,19 +477,19 @@ export default function FeeStatementScreen() {
           }
           placeholder="0"
           keyboardType="numeric"
-          style={styles.input}
+          style={styles.fintechInput}
         />
 
-        <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Buyer commission %</ThemedText>
+        <ThemedText style={styles.fintechLabel}>Buyer commission %</ThemedText>
         <NeonInput
           value={statement.buyerCommissionPct ? String(statement.buyerCommissionPct) : ""}
           onChangeText={(text) => setStatement((prev) => ({ ...prev, buyerCommissionPct: toNumber(text) }))}
           placeholder="0"
           keyboardType="numeric"
-          style={styles.input}
+          style={styles.fintechInput}
         />
 
-        <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Referral fee %</ThemedText>
+        <ThemedText style={styles.fintechLabel}>Referral fee %</ThemedText>
         <NeonInput
           value={statement.referralFeePct?.toString() ?? ""}
           onChangeText={(text) =>
@@ -462,12 +502,12 @@ export default function FeeStatementScreen() {
           }
           placeholder="0"
           keyboardType="numeric"
-          style={styles.input}
+          style={styles.fintechInput}
         />
 
         {Number(statement.referralFeePct ?? statement.referralFeePercent ?? 0) > 0 ? (
           <>
-            <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Referral Paid To</ThemedText>
+            <ThemedText style={styles.fintechLabel}>Referral Paid To</ThemedText>
             <NeonInput
               value={statement.referralRecipient ?? ""}
               onChangeText={(text) =>
@@ -478,14 +518,14 @@ export default function FeeStatementScreen() {
               }
               placeholder="Referral agent or brokerage"
               autoCapitalize="words"
-              style={styles.input}
+              style={styles.fintechInput}
             />
           </>
         ) : null}
 
         <SectionHeader title="Deposit" />
 
-        <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Deposit amount</ThemedText>
+        <ThemedText style={styles.fintechLabel}>Deposit amount</ThemedText>
         <NeonInput
           value={statement.deposit?.amount?.toString() ?? ""}
           onChangeText={(text) =>
@@ -500,10 +540,10 @@ export default function FeeStatementScreen() {
           }
           placeholder="0"
           keyboardType="numeric"
-          style={styles.input}
+          style={styles.fintechInput}
         />
 
-        <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Held by</ThemedText>
+        <ThemedText style={styles.fintechLabel}>Held by</ThemedText>
         <NeonInput
           value={statement.deposit?.heldBy ?? ""}
           onChangeText={(text) =>
@@ -517,11 +557,11 @@ export default function FeeStatementScreen() {
             }))
           }
           placeholder="Title Company / Brokerage"
-          style={styles.input}
+          style={styles.fintechInput}
         />
 
         <View style={styles.row}>
-          <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Credited to buyer</ThemedText>
+          <ThemedText style={styles.fintechLabel}>Credited to buyer</ThemedText>
           <View
             style={[
               styles.toggleWrap,
@@ -551,7 +591,7 @@ export default function FeeStatementScreen() {
         {(statement.teamSplits ?? []).map((split, index) => (
           <View key={split.id ?? `${index}`} style={styles.splitRow}>
             <NeonInput
-              style={[styles.input, styles.splitName]}
+              style={[styles.fintechInput, styles.splitName]}
               placeholder="Agent name"
               value={split.name}
               onChangeText={(text) =>
@@ -565,7 +605,7 @@ export default function FeeStatementScreen() {
             />
 
             <NeonInput
-              style={[styles.input, styles.splitPct]}
+              style={[styles.fintechInput, styles.splitPct]}
               placeholder="%"
               keyboardType="numeric"
               value={String(split.percentage ?? 0)}
@@ -616,7 +656,7 @@ export default function FeeStatementScreen() {
         >
           <ThemedText type="defaultSemiBold">+ Add team member</ThemedText>
         </Pressable>
-      </ThemedView>
+      </FintechTile>
 
       <NeonCard active style={styles.previewSection}>
         <SectionHeader title="Preview" />
@@ -628,9 +668,13 @@ export default function FeeStatementScreen() {
         {summary.referralFeeAmount > 0 && statement.referralRecipient ? (
           <ThemedText>Referral paid to: {statement.referralRecipient}</ThemedText>
         ) : null}
-        <ThemedText type="defaultSemiBold" style={styles.previewNet}>
-          Net commission: {money(summary.netCommissionAmount)}
-        </ThemedText>
+
+        <View style={styles.netHighlight}>
+          <ThemedText style={styles.netHighlightLabel}>Net Commission</ThemedText>
+          <ThemedText style={styles.netHighlightValue}>
+            {money(summary.netCommissionAmount)}
+          </ThemedText>
+        </View>
 
         {statement.deposit?.amount ? (
           <>
