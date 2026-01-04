@@ -1,35 +1,106 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { glow, theme } from '@/constants/theme';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
         tabBarButton: HapticTab,
+        tabBarShowLabel: true,
+        tabBarActiveTintColor: theme.colors.textMuted,
+        tabBarInactiveTintColor: theme.colors.textMuted,
+        tabBarStyle: {
+          backgroundColor: theme.colors.bgPrimary,
+          borderTopColor: theme.colors.border,
+        },
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused}>
+              <IconSymbol size={26} name="house.fill" color={theme.colors.textMuted} />
+            </TabIcon>
+          ),
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
           title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused}>
+              <IconSymbol size={26} name="paperplane.fill" color={theme.colors.textMuted} />
+            </TabIcon>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="fuel"
+        options={{
+          title: 'Fuel',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused}>
+              <IconSymbol size={26} name="drop" color={theme.colors.textMuted} />
+            </TabIcon>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: 'History',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused}>
+              <IconSymbol size={26} name="clock.fill" color={theme.colors.textMuted} />
+            </TabIcon>
+          ),
         }}
       />
     </Tabs>
   );
 }
+
+function TabIcon({ focused, children }: { focused: boolean; children: React.ReactNode }) {
+  return (
+    <View style={[styles.iconTile, focused && styles.iconTileActive]}>
+      {children}
+      <View style={[styles.underline, focused && styles.underlineActive]} />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  iconTile: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
+  },
+
+  iconTileActive: {
+    backgroundColor: theme.colors.bgSecondary,
+    ...glow,
+  },
+  underline: {
+    height: 2,
+    width: 18,
+    borderRadius: 1,
+    backgroundColor: 'transparent',
+    marginTop: 4,
+  },
+  underlineActive: {
+    backgroundColor: theme.colors.accent,
+  },
+});

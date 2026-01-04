@@ -1,98 +1,474 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useEffect, useState } from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { NeonInput } from "@/components/ui/neon-input";
+import { NeonCard } from "@/components/ui/neon-card";
+import { SectionHeader } from "@/components/ui/section-header";
+import { colors, typography, ui } from "@/constants/theme";
+import type { Statement } from "@/src/models/statement";
+import { getFuelProrationStatementAddon } from "@/src/storage/fuelProrationSession";
+import { getLatestStatement, saveStatement as upsertStatement } from "@/src/storage/statementStorage";
+import { calculateStatementSummary } from "@/src/utils/calculations";
+import { exportStatementPdf } from "../../src/pdf/exportStatementPdf";
+import { validateStatement } from "../../src/utils/validation";
 
-export default function HomeScreen() {
+function createStatementId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+const emptyStatement: Statement = {
+  id: createStatementId(),
+  createdAt: new Date().toISOString(),
+  propertyAddress: "",
+  salePrice: 0,
+  listingCommissionPct: 0,
+  buyerCommissionPct: 0,
+  referralFeePct: 0,
+  deposit: {
+    amount: 0,
+    heldBy: "",
+    creditedToBuyer: false,
+  },
+  teamSplits: [],
+};
+
+function toNumber(text: string): number {
+  const next = Number(text.replace(/,/g, ""));
+  return Number.isFinite(next) ? next : 0;
+}
+
+function money(value: number): string {
+  return `$${value.toFixed(2)}`;
+}
+
+export default function FeeStatementScreen() {
+  const [statement, setStatement] = useState<Statement>(() => emptyStatement);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  async function saveStatement() {
+    const errors = validateStatement(statement);
+
+    if (errors.length > 0) {
+      Alert.alert(
+        "Fix required fields",
+        errors.map((e) => `• ${e.message}`).join("\n")
+      );
+      return;
+    }
+
+    await upsertStatement(statement);
+    Alert.alert("Saved", "Statement saved successfully.");
+  }
+
+  async function exportPdf() {
+    const errors = validateStatement(statement);
+
+    if (errors.length > 0) {
+      Alert.alert(
+        "Cannot export PDF",
+        errors.map((e) => `• ${e.message}`).join("\n")
+      );
+      return;
+    }
+
+    try {
+      await exportStatementPdf(statement, getFuelProrationStatementAddon());
+    } catch {
+      Alert.alert(
+        "Export failed",
+        "Unable to generate or share the PDF. Please try again."
+      );
+    }
+  }
+
+  useEffect(() => {
+    let isMounted = true;
+    getLatestStatement()
+      .then((latest) => {
+        if (!isMounted) return;
+        if (latest) setStatement(latest);
+      })
+      .catch(() => {
+        // ignore; storage is optional for app startup
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const summary = calculateStatementSummary(statement);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+    >
+      <ThemedText type="title">Fee Statement</ThemedText>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
+      <ThemedView style={styles.actionsRow}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={async () => {
+            setSaveStatus("saving");
+            try {
+              await saveStatement();
+              setSaveStatus("saved");
+            } catch {
+              setSaveStatus("error");
+            }
+          }}
+          style={({ pressed }) => [
+            styles.saveButtonBase,
+            styles.primaryButton,
+            pressed ? styles.primaryButtonPressed : undefined,
+          ]}
+        >
+          <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>
+            {saveStatus === "saving" ? "Saving…" : "Save"}
+          </ThemedText>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={exportPdf}
+          style={[styles.saveButtonBase, styles.secondaryButton]}
+        >
+          <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Export PDF</ThemedText>
+        </Pressable>
+        {saveStatus === "saved" ? <ThemedText style={styles.statusOk}>Saved</ThemedText> : null}
+        {saveStatus === "error" ? <ThemedText style={styles.statusBad}>Save failed</ThemedText> : null}
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
+
+      <ThemedView style={styles.section}>
+        <ThemedText type="subtitle">Statement</ThemedText>
+
+        <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Property address</ThemedText>
+        <NeonInput
+          value={statement.propertyAddress}
+          onChangeText={(text) => setStatement((prev) => ({ ...prev, propertyAddress: text }))}
+          placeholder="123 Main St"
+          style={styles.input}
+        />
+
+        <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Sale price</ThemedText>
+        <NeonInput
+          value={statement.salePrice ? String(statement.salePrice) : ""}
+          onChangeText={(text) => setStatement((prev) => ({ ...prev, salePrice: toNumber(text) }))}
+          placeholder="0"
+          keyboardType="numeric"
+          style={styles.input}
+        />
+
+        <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Listing commission %</ThemedText>
+        <NeonInput
+          value={statement.listingCommissionPct ? String(statement.listingCommissionPct) : ""}
+          onChangeText={(text) =>
+            setStatement((prev) => ({ ...prev, listingCommissionPct: toNumber(text) }))
+          }
+          placeholder="0"
+          keyboardType="numeric"
+          style={styles.input}
+        />
+
+        <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Buyer commission %</ThemedText>
+        <NeonInput
+          value={statement.buyerCommissionPct ? String(statement.buyerCommissionPct) : ""}
+          onChangeText={(text) => setStatement((prev) => ({ ...prev, buyerCommissionPct: toNumber(text) }))}
+          placeholder="0"
+          keyboardType="numeric"
+          style={styles.input}
+        />
+
+        <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Referral fee %</ThemedText>
+        <NeonInput
+          value={statement.referralFeePct?.toString() ?? ""}
+          onChangeText={(text) =>
+            setStatement((prev) => ({
+              ...prev,
+              referralFeePct: toNumber(text) || 0,
+            }))
+          }
+          placeholder="0"
+          keyboardType="numeric"
+          style={styles.input}
+        />
+
+        <SectionHeader title="Deposit" />
+
+        <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Deposit amount</ThemedText>
+        <NeonInput
+          value={statement.deposit?.amount?.toString() ?? ""}
+          onChangeText={(text) =>
+            setStatement((prev) => ({
+              ...prev,
+              deposit: {
+                amount: toNumber(text) || 0,
+                heldBy: prev.deposit?.heldBy ?? "",
+                creditedToBuyer: prev.deposit?.creditedToBuyer ?? false,
+              },
+            }))
+          }
+          placeholder="0"
+          keyboardType="numeric"
+          style={styles.input}
+        />
+
+        <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Held by</ThemedText>
+        <NeonInput
+          value={statement.deposit?.heldBy ?? ""}
+          onChangeText={(text) =>
+            setStatement((prev) => ({
+              ...prev,
+              deposit: {
+                amount: prev.deposit?.amount ?? 0,
+                heldBy: text,
+                creditedToBuyer: prev.deposit?.creditedToBuyer ?? false,
+              },
+            }))
+          }
+          placeholder="Title Company / Brokerage"
+          style={styles.input}
+        />
+
+        <View style={styles.row}>
+          <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Credited to buyer</ThemedText>
+          <View
+            style={[
+              styles.toggleWrap,
+              statement.deposit?.creditedToBuyer ? styles.toggleWrapOn : undefined,
+            ]}
+          >
+            <Switch
+              value={statement.deposit?.creditedToBuyer ?? false}
+              thumbColor={colors.textPrimary}
+              trackColor={{ false: colors.border, true: colors.accentSoft }}
+              onValueChange={(value) =>
+                setStatement((prev) => ({
+                  ...prev,
+                  deposit: {
+                    amount: prev.deposit?.amount ?? 0,
+                    heldBy: prev.deposit?.heldBy ?? "",
+                    creditedToBuyer: value,
+                  },
+                }))
+              }
+            />
+          </View>
+        </View>
+
+        <SectionHeader title="Team Splits" />
+
+        {(statement.teamSplits ?? []).map((split, index) => (
+          <View key={split.id ?? `${index}`} style={styles.splitRow}>
+            <NeonInput
+              style={[styles.input, styles.splitName]}
+              placeholder="Agent name"
+              value={split.name}
+              onChangeText={(text) =>
+                setStatement((prev) => {
+                  const current = prev.teamSplits ?? [];
+                  const updated = current.slice();
+                  updated[index] = { ...updated[index], name: text };
+                  return { ...prev, teamSplits: updated };
+                })
+              }
+            />
+
+            <NeonInput
+              style={[styles.input, styles.splitPct]}
+              placeholder="%"
+              keyboardType="numeric"
+              value={String(split.percentage ?? 0)}
+              onChangeText={(text) =>
+                setStatement((prev) => {
+                  const current = prev.teamSplits ?? [];
+                  const updated = current.slice();
+                  updated[index] = {
+                    ...updated[index],
+                    percentage: toNumber(text) || 0,
+                  };
+                  return { ...prev, teamSplits: updated };
+                })
+              }
+            />
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() =>
+                setStatement((prev) => ({
+                  ...prev,
+                  teamSplits: (prev.teamSplits ?? []).filter((_, i) => i !== index),
+                }))
+              }
+              style={styles.removeButton}
+            >
+              <ThemedText style={styles.remove}>✕</ThemedText>
+            </Pressable>
+          </View>
+        ))}
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() =>
+            setStatement((prev) => ({
+              ...prev,
+              teamSplits: [
+                ...(prev.teamSplits ?? []),
+                {
+                  id: createStatementId(),
+                  name: "",
+                  percentage: 0,
+                },
+              ],
+            }))
+          }
+          style={[styles.addButton, styles.secondaryButton]}
+        >
+          <ThemedText type="defaultSemiBold">+ Add team member</ThemedText>
+        </Pressable>
       </ThemedView>
-    </ParallaxScrollView>
+
+      <NeonCard active style={styles.previewSection}>
+        <SectionHeader title="Preview" />
+
+        <ThemedText>Listing commission: {money(summary.listingCommissionAmount)}</ThemedText>
+        <ThemedText>Buyer commission: {money(summary.buyerCommissionAmount)}</ThemedText>
+        <ThemedText>Gross commission: {money(summary.grossCommissionAmount)}</ThemedText>
+        <ThemedText>Referral fee: {money(summary.referralFeeAmount)}</ThemedText>
+        <ThemedText type="defaultSemiBold" style={styles.previewNet}>
+          Net commission: {money(summary.netCommissionAmount)}
+        </ThemedText>
+
+        {statement.deposit?.amount ? (
+          <>
+            <ThemedText>Deposit: {money(statement.deposit.amount)}</ThemedText>
+            <ThemedText>Held by: {statement.deposit.heldBy || "—"}</ThemedText>
+            <ThemedText>
+              Credited to buyer: {statement.deposit.creditedToBuyer ? "Yes" : "No"}
+            </ThemedText>
+          </>
+        ) : null}
+
+        {summary.teamSplitResults?.length ? (
+          <>
+            <ThemedText style={styles.previewHeader}>Team Split</ThemedText>
+            {summary.teamSplitResults.map((split, index) => (
+              <ThemedText key={`${split.name}-${split.percentage}-${index}`}>
+                {split.name || "—"}: {money(split.amount)}
+              </ThemedText>
+            ))}
+          </>
+        ) : null}
+      </NeonCard>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  scroll: {
+    flex: 1,
+    backgroundColor: colors.bgPrimary,
   },
-  stepContainer: {
+  container: {
+    padding: 16,
+    paddingBottom: 28,
+    gap: 16,
+  },
+  actionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  saveButtonBase: {
+    paddingHorizontal: 14,
+  },
+  primaryButton: {
+    ...ui.primaryButton,
+  },
+  primaryButtonPressed: {
+    ...ui.primaryButtonPressed,
+  },
+  primaryButtonText: {
+    color: colors.accent,
+  },
+  secondaryButton: {
+    ...ui.secondaryButton,
+  },
+  statusOk: {
+    color: colors.success,
+  },
+  statusBad: {
+    color: colors.danger,
+  },
+  section: {
+    ...ui.card,
+    gap: 12,
+  },
+  previewSection: {
+    ...ui.previewCard,
+    gap: 8,
+    padding: 16,
+  },
+  input: {
+    ...ui.input,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  toggleWrap: {
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  toggleWrapOn: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accentSoft,
+  },
+  splitRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  splitName: {
+    flex: 2,
+  },
+  splitPct: {
+    width: 70,
+    textAlign: "right",
+  },
+  removeButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bgSecondary,
+  },
+  remove: {
+    fontSize: 18,
+    color: colors.danger,
+  },
+  addButton: {
+    marginTop: 8,
+    paddingVertical: 12,
+  },
+  previewHeader: {
+    ...typography.sectionHeader,
+    marginTop: 12,
+  },
+  previewNet: {
+    color: colors.accent,
+    textShadowColor: colors.accentSoft,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
+  fieldLabel: {
+    color: colors.textSecondary,
   },
 });

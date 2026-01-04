@@ -1,0 +1,323 @@
+import { useEffect, useMemo, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
+
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { FuelGauge } from "@/components/FuelGauge";
+import { NeonInput } from "@/components/ui/neon-input";
+import { SectionHeader } from "@/components/ui/section-header";
+import { colors, ui } from "@/constants/theme";
+import type { FuelTank } from "@/src/models/fuelProration";
+import { getFuelProrationSession, setFuelProrationSession } from "@/src/storage/fuelProrationSession";
+import { calculateFuelProration, clamp, parseDecimalInput } from "@/src/utils/fuelCalculations";
+
+function createId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function formatMoney(value: number): string {
+  if (!Number.isFinite(value)) return "$0.00";
+  return `$${value.toFixed(2)}`;
+}
+
+export default function FuelScreen() {
+  const initial = getFuelProrationSession();
+
+  const [tanks, setTanks] = useState<FuelTank[]>([]);
+  const [includeInStatement, setIncludeInStatement] = useState<boolean>(initial.includeInStatement);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+
+  const { tankResults, totalCredit } = useMemo(() => calculateFuelProration(tanks), [tanks]);
+
+  const { totalPercent } = useMemo(() => {
+    const gallons = tankResults.reduce((sum, t) => sum + (Number.isFinite(t.effectiveGallons) ? t.effectiveGallons : 0), 0);
+    const capacity = tankResults.reduce((sum, t) => sum + (Number.isFinite(t.capacityGallons) ? Math.max(0, t.capacityGallons) : 0), 0);
+    const percent = capacity > 0 ? (gallons / capacity) * 100 : 0;
+    return {
+      totalPercent: clamp(percent, 0, 100),
+    };
+  }, [tankResults]);
+
+  useEffect(() => {
+    setFuelProrationSession({ includeInStatement, totalCredit, totalPercent });
+  }, [includeInStatement, totalCredit, totalPercent]);
+
+  function addTank() {
+    setTanks((prev) => [
+      ...prev,
+      {
+        id: createId(),
+        capacityGallons: 0,
+        currentGallons: 0,
+        percentFull: undefined,
+        pricePerGallon: 0,
+      },
+    ]);
+  }
+
+  function removeTank(id: string) {
+    setTanks((prev) => prev.filter((t) => t.id !== id));
+  }
+
+  function updateTank(id: string, patch: Partial<FuelTank>) {
+    setTanks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  }
+
+  return (
+    <ThemedView style={styles.screen}>
+      <ScrollView
+        scrollEnabled={scrollEnabled}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
+        <ThemedText type="title">Fuel Proration</ThemedText>
+
+        <ThemedView style={styles.card}>
+          <View style={styles.toggleRow}>
+            <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Include with fee statement</ThemedText>
+            <View style={[styles.toggleWrap, includeInStatement ? styles.toggleWrapOn : undefined]}>
+              <Switch
+                value={includeInStatement}
+                onValueChange={setIncludeInStatement}
+                thumbColor={colors.textPrimary}
+                trackColor={{ false: colors.border, true: colors.accentSoft }}
+              />
+            </View>
+          </View>
+          <ThemedText style={styles.helperText}>
+            When enabled, only the total credit is added to the PDF.
+          </ThemedText>
+        </ThemedView>
+
+        {tankResults.map((tank) => (
+          <ThemedView key={tank.id} style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.sectionHeaderWrap}>
+                <SectionHeader title="Propane Tank" />
+              </View>
+              <Pressable accessibilityRole="button" onPress={() => removeTank(tank.id)} style={styles.removeButton}>
+                <ThemedText style={styles.removeText}>✕</ThemedText>
+              </Pressable>
+            </View>
+
+            <FuelGauge
+              percent={
+                tank.percentFull ??
+                (tank.capacityGallons > 0 ? (tank.currentGallons / tank.capacityGallons) * 100 : 0)
+              }
+              capacity={tank.capacityGallons}
+              pricePerGallon={tank.pricePerGallon}
+              onChange={(percent, gallons) =>
+                updateTank(tank.id, {
+                  percentFull: percent,
+                  currentGallons: gallons,
+                })
+              }
+              onDragStart={() => setScrollEnabled(false)}
+              onDragEnd={() => setScrollEnabled(true)}
+            />
+
+            <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Tank capacity (gal)</ThemedText>
+            <NeonInput
+              value={tank.capacityGallons ? String(tank.capacityGallons) : ""}
+              onChangeText={(text) => {
+                const nextCapacity = Math.max(0, parseDecimalInput(text));
+                const next = { capacityGallons: nextCapacity } as Partial<FuelTank>;
+                if (tank.percentFull != null) {
+                  next.currentGallons = (nextCapacity * clamp(tank.percentFull, 0, 100)) / 100;
+                }
+                updateTank(tank.id, next);
+              }}
+              placeholder="0"
+              keyboardType="decimal-pad"
+              style={styles.input}
+            />
+
+            <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Percent full (%)</ThemedText>
+            <NeonInput
+              value={tank.percentFull == null ? "" : String(tank.percentFull)}
+              onChangeText={(text) => {
+                const trimmed = text.trim();
+
+                if (trimmed === "") {
+                  updateTank(tank.id, { percentFull: undefined });
+                  return;
+                }
+
+                const nextPercent = clamp(parseDecimalInput(trimmed), 0, 100);
+                const nextGallons = (Math.max(0, tank.capacityGallons) * nextPercent) / 100;
+
+                updateTank(tank.id, {
+                  percentFull: nextPercent,
+                  currentGallons: nextGallons,
+                });
+              }}
+              placeholder="e.g. 75"
+              keyboardType="decimal-pad"
+              style={styles.input}
+            />
+            <ThemedText style={styles.helperText}>
+              Entering a percentage will auto-calculate gallons.
+            </ThemedText>
+
+            <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Current gallons</ThemedText>
+            <NeonInput
+              value={tank.currentGallons ? tank.currentGallons.toFixed(2) : ""}
+              editable={tank.percentFull == null}
+              onChangeText={(text) => {
+                const gallons = Math.max(0, parseDecimalInput(text));
+                const cap = Math.max(0, tank.capacityGallons);
+                const clampedGallons = cap > 0 ? clamp(gallons, 0, cap) : gallons;
+
+                updateTank(tank.id, {
+                  currentGallons: clampedGallons,
+                  percentFull: undefined,
+                });
+              }}
+              placeholder="0"
+              keyboardType="decimal-pad"
+              style={[styles.input, tank.percentFull != null && styles.inputReadOnly]}
+            />
+
+            <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>Price per gallon</ThemedText>
+            <NeonInput
+              value={tank.pricePerGallon ? String(tank.pricePerGallon) : ""}
+              onChangeText={(text) =>
+                updateTank(tank.id, {
+                  pricePerGallon: Math.max(0, parseDecimalInput(text)),
+                })
+              }
+              placeholder="e.g. 3.27"
+              keyboardType="decimal-pad"
+              style={styles.input}
+            />
+
+            <View style={styles.divider} />
+
+            <View style={styles.creditRow}>
+              <ThemedText style={styles.creditLabel}>Credit</ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.creditValue}>
+                {formatMoney(tank.credit)}
+              </ThemedText>
+            </View>
+          </ThemedView>
+        ))}
+
+        <Pressable accessibilityRole="button" onPress={addTank} style={[styles.addButton, styles.secondaryButton]}>
+          <ThemedText type="defaultSemiBold">+ Add tank</ThemedText>
+        </Pressable>
+
+        <ThemedView style={styles.totalCard}>
+          <ThemedText style={styles.totalLabel}>Total Fuel Credit</ThemedText>
+          <ThemedText style={styles.totalValue}>{formatMoney(totalCredit)}</ThemedText>
+        </ThemedView>
+      </ScrollView>
+    </ThemedView>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: colors.bgPrimary,
+  },
+  container: {
+    padding: 16,
+    paddingBottom: 28,
+    gap: 12,
+  },
+  card: {
+    ...ui.card,
+    gap: 10,
+  },
+  input: {
+    ...ui.input,
+  },
+  inputReadOnly: {
+    opacity: 0.85,
+  },
+  divider: {
+    ...ui.divider,
+  },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  helperText: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  fieldLabel: {
+    color: colors.textSecondary,
+  },
+  cardHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  sectionHeaderWrap: {
+    flex: 1,
+  },
+  toggleWrap: {
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  toggleWrapOn: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accentSoft,
+  },
+  removeButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bgSecondary,
+  },
+  removeText: {
+    color: colors.danger,
+    fontSize: 16,
+    lineHeight: 16,
+  },
+  creditRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  creditLabel: {
+    color: colors.textSecondary,
+  },
+  creditValue: {
+    color: colors.textPrimary,
+  },
+  addButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  secondaryButton: {
+    ...ui.secondaryButton,
+  },
+  totalCard: {
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+  },
+  totalLabel: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+  },
+  totalValue: {
+    color: colors.accent,
+    fontSize: 22,
+    fontWeight: "800",
+    marginTop: 6,
+  },
+});
