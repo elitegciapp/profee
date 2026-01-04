@@ -63,8 +63,9 @@ export default function FeeStatementScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const [statement, setStatement] = useState<Statement>(() => createEmptyStatement());
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [sendMode, setSendMode] = useState<"full" | "fuel-only">("full");
   const [fuelSnapshot, setFuelSnapshot] = useState(() => getFuelProrationSession());
+
+  const sendMode: "full" | "fuel-only" = fuelSnapshot.sendFuelOnly ? "fuel-only" : "full";
 
   const styles = StyleSheet.create({
     scroll: {
@@ -465,36 +466,6 @@ export default function FeeStatementScreen() {
         {saveStatus === "saved" ? <ThemedText style={styles.statusOk}>Saved</ThemedText> : null}
         {saveStatus === "error" ? <ThemedText style={styles.statusBad}>Save failed</ThemedText> : null}
       </ThemedView>
-
-      <NeonCard active style={styles.section}>
-        <SectionHeader title="Fuel Proration" />
-
-        <View style={styles.row}>
-          <ThemedText style={styles.fieldLabel}>Fuel Level</ThemedText>
-          <ThemedText style={styles.fieldLabel}>
-            {Math.round(Number.isFinite(fuelSnapshot.totalPercent) ? fuelSnapshot.totalPercent : 0)}%
-          </ThemedText>
-        </View>
-
-        <View style={styles.row}>
-          <ThemedText style={styles.fieldLabel}>Total Fuel Credit</ThemedText>
-          <ThemedText style={styles.fieldLabel}>
-            {money(Number.isFinite(fuelSnapshot.totalCredit) ? fuelSnapshot.totalCredit : 0)}
-          </ThemedText>
-        </View>
-
-        <View style={styles.row}>
-          <ThemedText style={styles.fieldLabel}>Send only fuel proration</ThemedText>
-          <View style={[styles.toggleWrap, sendMode === "fuel-only" ? styles.toggleWrapOn : undefined]}>
-            <Switch
-              value={sendMode === "fuel-only"}
-              thumbColor={theme.colors.textPrimary}
-              trackColor={{ false: theme.colors.border, true: theme.colors.accentSoft }}
-              onValueChange={(value) => setSendMode(value ? "fuel-only" : "full")}
-            />
-          </View>
-        </View>
-      </NeonCard>
 
       <ThemedView style={styles.sendRow}>
         <Pressable

@@ -135,6 +135,7 @@ export default function FuelScreen() {
 
   const [tanks, setTanks] = useState<FuelTank[]>([]);
   const [includeInStatement, setIncludeInStatement] = useState<boolean>(initial.includeInStatement);
+  const [sendFuelOnly, setSendFuelOnly] = useState<boolean>(initial.sendFuelOnly);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [priceInputById, setPriceInputById] = useState<Record<string, string>>({});
 
@@ -156,8 +157,8 @@ export default function FuelScreen() {
   }, [tankResults]);
 
   useEffect(() => {
-    setFuelProrationSession({ includeInStatement, totalCredit, totalPercent });
-  }, [includeInStatement, totalCredit, totalPercent]);
+    setFuelProrationSession({ includeInStatement, sendFuelOnly, totalCredit, totalPercent });
+  }, [includeInStatement, sendFuelOnly, totalCredit, totalPercent]);
 
   function addTank() {
     const id = createId();
@@ -213,6 +214,25 @@ export default function FuelScreen() {
           </View>
           <ThemedText style={styles.helperText}>
             When enabled, only the total credit is added to the PDF.
+          </ThemedText>
+
+          <View style={styles.divider} />
+
+          <View style={styles.toggleRow}>
+            <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
+              Send only fuel proration
+            </ThemedText>
+            <View style={[styles.toggleWrap, sendFuelOnly ? styles.toggleWrapOn : undefined]}>
+              <Switch
+                value={sendFuelOnly}
+                onValueChange={setSendFuelOnly}
+                thumbColor={theme.colors.textPrimary}
+                trackColor={{ false: theme.colors.border, true: theme.colors.accentSoft }}
+              />
+            </View>
+          </View>
+          <ThemedText style={styles.helperText}>
+            When enabled, Send/Export from Fee Statement will use fuel only.
           </ThemedText>
         </ThemedView>
 
