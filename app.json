@@ -9,10 +9,12 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "bundleIdentifier": "app.profee.profee",
       "buildNumber": "1",
       "supportsTablet": true
     },
     "android": {
+      "package": "app.profee.profee",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
