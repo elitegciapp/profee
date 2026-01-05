@@ -27,6 +27,13 @@ function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+function pct(value?: number): string {
+  if (!Number.isFinite(value)) return "—";
+  const clamped = clampNumber(value as number, 0, 100);
+  const rounded = Math.round(clamped * 100) / 100;
+  return `${rounded}%`;
+}
+
 function fuelBar(percent: number): string {
   const p = Math.round(clampNumber(percent, 0, 100));
 
@@ -133,12 +140,12 @@ export function buildStatementHtml(
   </div>
 
   <div class="row">
-    <div class="label">Listing commission</div>
+    <div class="label">Seller agent commission (${pct(statement.listingCommissionPct)})</div>
     <div class="value">${money(summary.listingCommissionAmount)}</div>
   </div>
 
   <div class="row">
-    <div class="label">Buyer commission</div>
+    <div class="label">Buyer agent commission (${pct(statement.buyerCommissionPct)})</div>
     <div class="value">${money(summary.buyerCommissionAmount)}</div>
   </div>
 
