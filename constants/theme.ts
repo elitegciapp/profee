@@ -109,6 +109,16 @@ type ThemeUI = {
 
 type ThemeTokens = {
   colors: ThemeColors;
+  tiles: {
+    /** Subtle diagonal gradient wash, under ~20% opacity. */
+    primaryGradient: [string, string, string];
+    /** Even lighter background gradient for screens behind tiles. */
+    backgroundGradient: [string, string, string];
+    /** Soft edge glow tint (keep cyan/blue, no rainbow chaos). */
+    edgeGlow: [string, string];
+    /** Subtle inset border to keep depth without harsh outlines. */
+    insetBorder: string;
+  };
   glow: {
     shadowColor: string;
     shadowOpacity: number;
@@ -241,6 +251,20 @@ function buildTheme(
 
   return {
     colors: derivedColors,
+    tiles: {
+      primaryGradient: [
+        'rgba(79,232,255,0.18)',
+        'rgba(79,124,255,0.12)',
+        'rgba(138,79,255,0.18)',
+      ],
+      backgroundGradient: [
+        isDark ? 'rgba(79,232,255,0.06)' : 'rgba(79,232,255,0.035)',
+        isDark ? 'rgba(79,124,255,0.04)' : 'rgba(79,124,255,0.025)',
+        isDark ? 'rgba(138,79,255,0.06)' : 'rgba(138,79,255,0.035)',
+      ],
+      edgeGlow: ['rgba(79,232,255,0.40)', 'rgba(79,124,255,0.40)'],
+      insetBorder: 'rgba(255,255,255,0.05)',
+    },
     glow: nextGlow,
     radius,
     typography: nextTypography,

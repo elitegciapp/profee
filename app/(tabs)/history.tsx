@@ -1,9 +1,11 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { NeonCard } from "@/components/ui/neon-card";
 import type { Statement } from "@/src/models/statement";
 import { deleteStatement, getAllStatements } from "@/src/storage/statements";
 import { useTheme } from "@/src/context/ThemeContext";
@@ -18,6 +20,10 @@ export default function HistoryScreen() {
       flex: 1,
       backgroundColor: theme.colors.bgPrimary,
     },
+    screenGradient: {
+      ...StyleSheet.absoluteFillObject,
+      opacity: 1,
+    },
     container: {
       padding: 16,
       paddingBottom: 28,
@@ -27,7 +33,8 @@ export default function HistoryScreen() {
       color: theme.colors.textMuted,
     },
     card: {
-      ...theme.ui.card,
+      padding: 16,
+      borderRadius: theme.radius.lg,
       gap: 6,
       marginBottom: 0,
     },
@@ -82,6 +89,13 @@ export default function HistoryScreen() {
 
   return (
     <ThemedView style={styles.screen}>
+      <LinearGradient
+        pointerEvents="none"
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        colors={theme.tiles.backgroundGradient}
+        style={styles.screenGradient}
+      />
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <ThemedText type="title">History</ThemedText>
 
@@ -90,7 +104,7 @@ export default function HistoryScreen() {
         )}
 
         {statements.map((s) => (
-          <ThemedView key={s.id} style={styles.card}>
+          <NeonCard key={s.id} style={styles.card}>
             <ThemedText type="defaultSemiBold">
               {s.propertyAddress || "Untitled Statement"}
             </ThemedText>
@@ -111,7 +125,7 @@ export default function HistoryScreen() {
               />
               <Button label="Delete" tone="danger" onPress={() => confirmDelete(s.id)} />
             </View>
-          </ThemedView>
+          </NeonCard>
         ))}
       </ScrollView>
     </ThemedView>

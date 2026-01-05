@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from "react-native";
+import {
+  Alert,
+  Image,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  TextInput,
+  View,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Crypto from "expo-crypto";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -75,18 +86,50 @@ export default function FeeStatementScreen() {
       flex: 1,
       backgroundColor: theme.colors.bgPrimary,
     },
+    screenGradient: {
+      ...StyleSheet.absoluteFillObject,
+      opacity: 1,
+    },
     container: {
       padding: 16,
       paddingBottom: 28,
       gap: 16,
     },
-    actionsRow: {
-      flexDirection: "row",
-      alignItems: "center",
+    actionsGrid: {
       gap: 12,
     },
-    saveButtonBase: {
+    actionsRow: {
+      flexDirection: "row",
+      alignItems: "stretch",
+      gap: 12,
+    },
+    actionButtonBase: {
+      flex: 1,
       paddingHorizontal: 14,
+      minHeight: 44,
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    actionButtonGradient: {
+      ...StyleSheet.absoluteFillObject,
+      borderRadius: theme.radius.md,
+      opacity: isDark ? 1 : 0,
+    },
+    actionButtonGradientPressed: {
+      opacity: isDark ? 1 : 0,
+    },
+    actionButtonText: {
+      textAlign: "center",
+    },
+    actionButtonLabel: {
+      color: isDark ? theme.colors.textPrimary : theme.colors.accent,
+    },
+    actionStatusRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      minHeight: 18,
     },
     primaryButton: {
       ...theme.ui.primaryButton,
@@ -267,6 +310,12 @@ export default function FeeStatementScreen() {
     },
     selectorPlaceholder: {
       color: theme.colors.textMuted,
+    },
+
+    tileLogo: {
+      width: "100%",
+      height: 190,
+      resizeMode: "contain",
     },
   });
 
@@ -482,80 +531,176 @@ export default function FeeStatementScreen() {
       contentContainerStyle={styles.container}
       keyboardShouldPersistTaps="handled"
     >
+      <LinearGradient
+        pointerEvents="none"
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        colors={theme.tiles.backgroundGradient}
+        style={styles.screenGradient}
+      />
       <ThemedText type="title">Fee Statement</ThemedText>
 
-      <ThemedView style={styles.actionsRow}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={async () => {
-            setSaveStatus("saving");
-            try {
-              await saveStatement();
-              setSaveStatus("saved");
-            } catch {
-              setSaveStatus("error");
-            }
-          }}
-          style={({ pressed }) => [
-            styles.saveButtonBase,
-            styles.primaryButton,
-            pressed ? styles.primaryButtonPressed : undefined,
-          ]}
-        >
-          <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>
-            {saveStatus === "saving" ? "Saving…" : "Save"}
-          </ThemedText>
-        </Pressable>
+      <ThemedView style={styles.actionsGrid}>
+        <ThemedView style={styles.actionsRow}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={async () => {
+              setSaveStatus("saving");
+              try {
+                await saveStatement();
+                setSaveStatus("saved");
+              } catch {
+                setSaveStatus("error");
+              }
+            }}
+            style={({ pressed }) => [
+              styles.actionButtonBase,
+              styles.primaryButton,
+              pressed ? styles.primaryButtonPressed : undefined,
+              pressed ? { transform: [{ scale: 0.98 }] } : undefined,
+            ]}
+          >
+            {({ pressed }) => (
+              <>
+                <LinearGradient
+                  pointerEvents="none"
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  colors={theme.tiles.primaryGradient}
+                  style={[
+                    styles.actionButtonGradient,
+                    pressed ? styles.actionButtonGradientPressed : undefined,
+                  ]}
+                />
+                <ThemedText
+                  numberOfLines={1}
+                  type="defaultSemiBold"
+                  style={[styles.actionButtonLabel, styles.actionButtonText]}
+                >
+                  {saveStatus === "saving" ? "Saving…" : "Save"}
+                </ThemedText>
+              </>
+            )}
+          </Pressable>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={clearForm}
-          style={({ pressed }) => [
-            styles.saveButtonBase,
-            styles.primaryButton,
-            pressed ? styles.primaryButtonPressed : undefined,
-          ]}
-        >
-          <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>
-            Clear
-          </ThemedText>
-        </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={clearForm}
+            style={({ pressed }) => [
+              styles.actionButtonBase,
+              styles.primaryButton,
+              pressed ? styles.primaryButtonPressed : undefined,
+              pressed ? { transform: [{ scale: 0.98 }] } : undefined,
+            ]}
+          >
+            {({ pressed }) => (
+              <>
+                <LinearGradient
+                  pointerEvents="none"
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  colors={theme.tiles.primaryGradient}
+                  style={[
+                    styles.actionButtonGradient,
+                    pressed ? styles.actionButtonGradientPressed : undefined,
+                  ]}
+                />
+                <ThemedText
+                  numberOfLines={1}
+                  type="defaultSemiBold"
+                  style={[styles.actionButtonLabel, styles.actionButtonText]}
+                >
+                  Clear
+                </ThemedText>
+              </>
+            )}
+          </Pressable>
+        </ThemedView>
 
-        {saveStatus === "saved" ? <ThemedText style={styles.statusOk}>Saved</ThemedText> : null}
-        {saveStatus === "error" ? <ThemedText style={styles.statusBad}>Save failed</ThemedText> : null}
+        <ThemedView style={styles.actionsRow}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={exportPdf}
+            style={({ pressed }) => [
+              styles.actionButtonBase,
+              styles.primaryButton,
+              pressed ? styles.primaryButtonPressed : undefined,
+              pressed ? { transform: [{ scale: 0.98 }] } : undefined,
+            ]}
+          >
+            {({ pressed }) => (
+              <>
+                <LinearGradient
+                  pointerEvents="none"
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  colors={theme.tiles.primaryGradient}
+                  style={[
+                    styles.actionButtonGradient,
+                    pressed ? styles.actionButtonGradientPressed : undefined,
+                  ]}
+                />
+                <ThemedText
+                  numberOfLines={1}
+                  type="defaultSemiBold"
+                  style={[styles.actionButtonLabel, styles.actionButtonText]}
+                >
+                  {exportMode === "fuel-only" ? "Export Fuel PDF" : "Export PDF"}
+                </ThemedText>
+              </>
+            )}
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={copySummary}
+            style={({ pressed }) => [
+              styles.actionButtonBase,
+              styles.primaryButton,
+              pressed ? styles.primaryButtonPressed : undefined,
+              pressed ? { transform: [{ scale: 0.98 }] } : undefined,
+            ]}
+          >
+            {({ pressed }) => (
+              <>
+                <LinearGradient
+                  pointerEvents="none"
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  colors={theme.tiles.primaryGradient}
+                  style={[
+                    styles.actionButtonGradient,
+                    pressed ? styles.actionButtonGradientPressed : undefined,
+                  ]}
+                />
+                <ThemedText
+                  numberOfLines={1}
+                  type="defaultSemiBold"
+                  style={[styles.actionButtonLabel, styles.actionButtonText]}
+                >
+                  {exportMode === "fuel-only" ? "Copy Fuel Summary" : "Copy Statement"}
+                </ThemedText>
+              </>
+            )}
+          </Pressable>
+        </ThemedView>
+
+        <ThemedView style={styles.actionStatusRow}>
+          {saveStatus === "saved" ? <ThemedText style={styles.statusOk}>Saved</ThemedText> : null}
+          {saveStatus === "error" ? <ThemedText style={styles.statusBad}>Save failed</ThemedText> : null}
+        </ThemedView>
       </ThemedView>
 
-      <ThemedView style={styles.actionsRow}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={exportPdf}
-          style={({ pressed }) => [
-            styles.saveButtonBase,
-            styles.primaryButton,
-            pressed ? styles.primaryButtonPressed : undefined,
-          ]}
-        >
-          <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>
-            {exportMode === "fuel-only" ? "Export Fuel PDF" : "Export PDF"}
-          </ThemedText>
-        </Pressable>
-
-        <Pressable
-          accessibilityRole="button"
-          onPress={copySummary}
-          style={({ pressed }) => [
-            styles.saveButtonBase,
-            styles.primaryButton,
-            pressed ? styles.primaryButtonPressed : undefined,
-          ]}
-        >
-          <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>
-            {exportMode === "fuel-only" ? "Copy Fuel Summary" : "Copy Statement"}
-          </ThemedText>
-        </Pressable>
-      </ThemedView>
-
-      <FintechTile title="Fee Statement" subtitle="Commission & disbursement summary">
+      <FintechTile
+        title="Fee Statement"
+        subtitle="Commission & disbursement summary"
+        headerTop={
+          <Image
+            source={require("../../assets/images/Untitled (1536 x 1024 px).png")}
+            style={styles.tileLogo}
+          />
+        }
+      >
         <ThemedText style={styles.fintechLabel}>Property address</ThemedText>
         <TextInput
           value={statement.propertyAddress}

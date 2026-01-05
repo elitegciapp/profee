@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { NeonCard } from "@/components/ui/neon-card";
 import { NeonInput } from "@/components/ui/neon-input";
 import { SectionHeader } from "@/components/ui/section-header";
 import { useTheme } from "@/src/context/ThemeContext";
+import { LinearGradient } from "expo-linear-gradient";
 import type { FuelTank } from "@/src/models/fuelProration";
 import { getFuelProrationSession, setFuelProrationSession } from "@/src/storage/fuelProrationSession";
 import { calculateFuelProration, clamp, parseDecimalInput } from "@/src/utils/fuelCalculations";
@@ -28,13 +30,18 @@ export default function FuelScreen() {
       flex: 1,
       backgroundColor: theme.colors.bgPrimary,
     },
+    screenGradient: {
+      ...StyleSheet.absoluteFillObject,
+      opacity: 1,
+    },
     container: {
       padding: 16,
       paddingBottom: 28,
       gap: 12,
     },
     card: {
-      ...theme.ui.card,
+      padding: 16,
+      borderRadius: theme.radius.lg,
       gap: 10,
       marginBottom: 0,
     },
@@ -110,11 +117,8 @@ export default function FuelScreen() {
       ...theme.ui.secondaryButton,
     },
     totalCard: {
-      borderRadius: theme.radius.lg,
       padding: 18,
-      borderWidth: 1,
-      borderColor: isDark ? theme.colors.borderEmphasis : theme.colors.border,
-      backgroundColor: theme.colors.card,
+      borderRadius: theme.radius.lg,
     },
     totalLabel: {
       color: isDark ? theme.colors.textEmphasis : theme.colors.textPrimary,
@@ -189,13 +193,20 @@ export default function FuelScreen() {
 
   return (
     <ThemedView style={styles.screen}>
+      <LinearGradient
+        pointerEvents="none"
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        colors={theme.tiles.backgroundGradient}
+        style={styles.screenGradient}
+      />
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
         <ThemedText type="title">Fuel Proration</ThemedText>
 
-        <ThemedView style={styles.card}>
+        <NeonCard style={styles.card}>
           <View style={styles.toggleRow}>
             <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
               Include with fee statement
@@ -231,10 +242,10 @@ export default function FuelScreen() {
           <ThemedText style={styles.helperText}>
             When enabled, Export/Copy from Fee Statement will use fuel only.
           </ThemedText>
-        </ThemedView>
+        </NeonCard>
 
         {tankResults.map((tank) => (
-          <ThemedView key={tank.id} style={styles.card}>
+          <NeonCard key={tank.id} style={styles.card}>
             <View style={styles.cardHeaderRow}>
               <View style={styles.sectionHeaderWrap}>
                 <SectionHeader title="Propane Tank" />
@@ -353,7 +364,7 @@ export default function FuelScreen() {
                 {formatMoney(tank.credit)}
               </ThemedText>
             </View>
-          </ThemedView>
+          </NeonCard>
         ))}
 
         <Pressable
@@ -364,10 +375,10 @@ export default function FuelScreen() {
           <ThemedText type="defaultSemiBold">+ Add tank</ThemedText>
         </Pressable>
 
-        <ThemedView style={styles.totalCard}>
+        <NeonCard active style={styles.totalCard}>
           <ThemedText style={styles.totalLabel}>Total Fuel Credit</ThemedText>
           <ThemedText style={styles.totalValue}>{formatMoney(totalCredit)}</ThemedText>
-        </ThemedView>
+        </NeonCard>
       </ScrollView>
     </ThemedView>
   );

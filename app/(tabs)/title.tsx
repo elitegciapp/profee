@@ -2,9 +2,11 @@ import * as Crypto from "expo-crypto";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { NeonCard } from "@/components/ui/neon-card";
 import { NeonInput } from "@/components/ui/neon-input";
 import type { TitleCompany } from "@/src/models/titleCompany";
 import { getAllTitleCompanies, saveTitleCompany } from "@/src/storage/titleCompanies";
@@ -44,13 +46,18 @@ export default function TitleCompaniesScreen() {
       flex: 1,
       backgroundColor: theme.colors.bgPrimary,
     },
+    screenGradient: {
+      ...StyleSheet.absoluteFillObject,
+      opacity: 1,
+    },
     container: {
       padding: 16,
       paddingBottom: 28,
       gap: 12,
     },
     card: {
-      ...theme.ui.card,
+      padding: 16,
+      borderRadius: theme.radius.lg,
       gap: 10,
       marginBottom: 0,
     },
@@ -71,6 +78,7 @@ export default function TitleCompaniesScreen() {
     },
     button: {
       ...theme.ui.secondaryButton,
+      borderColor: theme.colors.accent,
       paddingVertical: 12,
       flex: 1,
     },
@@ -83,9 +91,13 @@ export default function TitleCompaniesScreen() {
       color: theme.colors.accent,
     },
     companyCard: {
-      ...theme.ui.card,
+      padding: 16,
+      borderRadius: theme.radius.lg,
       marginBottom: 0,
       gap: 6,
+    },
+    companyPressable: {
+      backgroundColor: "transparent",
     },
     companyName: {
       color: theme.colors.textPrimary,
@@ -179,6 +191,13 @@ export default function TitleCompaniesScreen() {
 
   return (
     <ThemedView style={styles.screen}>
+      <LinearGradient
+        pointerEvents="none"
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        colors={theme.tiles.backgroundGradient}
+        style={styles.screenGradient}
+      />
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <ThemedText type="title">Title</ThemedText>
         {isSelectMode ? (
@@ -187,7 +206,7 @@ export default function TitleCompaniesScreen() {
           <ThemedText style={styles.helper}>Save contacts for offline use and quick selection.</ThemedText>
         )}
 
-        <ThemedView style={styles.card}>
+        <NeonCard style={styles.card}>
           <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
             Title Company Name
           </ThemedText>
@@ -236,24 +255,25 @@ export default function TitleCompaniesScreen() {
               </ThemedText>
             </Pressable>
           </View>
-        </ThemedView>
+        </NeonCard>
 
         <View style={styles.divider} />
 
         {companies.map((company) => (
-          <Pressable
-            key={company.id}
-            accessibilityRole="button"
-            onPress={() => (isSelectMode ? onSelect(company) : beginEdit(company))}
-            style={styles.companyCard}
-          >
-            <ThemedText style={styles.companyName}>{company.name}</ThemedText>
-            <ThemedText style={styles.companyMeta}>{company.email}</ThemedText>
-            {company.contactName ? (
-              <ThemedText style={styles.companyMeta}>Contact: {company.contactName}</ThemedText>
-            ) : null}
-            {company.phone ? <ThemedText style={styles.companyMeta}>Phone: {company.phone}</ThemedText> : null}
-          </Pressable>
+          <NeonCard key={company.id} style={styles.companyCard}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => (isSelectMode ? onSelect(company) : beginEdit(company))}
+              style={styles.companyPressable}
+            >
+              <ThemedText style={styles.companyName}>{company.name}</ThemedText>
+              <ThemedText style={styles.companyMeta}>{company.email}</ThemedText>
+              {company.contactName ? (
+                <ThemedText style={styles.companyMeta}>Contact: {company.contactName}</ThemedText>
+              ) : null}
+              {company.phone ? <ThemedText style={styles.companyMeta}>Phone: {company.phone}</ThemedText> : null}
+            </Pressable>
+          </NeonCard>
         ))}
 
         {companies.length === 0 ? (

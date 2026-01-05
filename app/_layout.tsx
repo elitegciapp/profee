@@ -2,8 +2,16 @@ import { ThemeProvider as NavigationThemeProvider, type Theme } from '@react-nav
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as SplashScreen from 'expo-splash-screen';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View } from 'react-native';
 
 import { ThemeProvider, useTheme } from '@/src/context/ThemeContext';
+import { SplashOverlay } from '@/components/splash-overlay';
+
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // ignore
+});
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -21,6 +29,9 @@ export default function RootLayout() {
 
 function RootNavigation() {
   const { theme, colorScheme } = useTheme();
+  const [showSplash, setShowSplash] = useState(true);
+  const [hideSplash, setHideSplash] = useState(false);
+  const [rootLaidOut, setRootLaidOut] = useState(false);
 
   const navTheme: Theme = {
     dark: colorScheme === 'dark',
@@ -40,22 +51,51 @@ function RootNavigation() {
     },
   };
 
+  const onRootLayout = useCallback(() => {
+    setRootLaidOut(true);
+  }, []);
+
+  useEffect(() => {
+    if (!rootLaidOut) return;
+    SplashScreen.hideAsync().catch(() => {
+      // ignore
+    });
+  }, [rootLaidOut]);
+
+  useEffect(() => {
+    if (!rootLaidOut) return;
+    // Keep a short minimum display time for the logo fade-in, then fade out.
+    const t = setTimeout(() => setHideSplash(true), 950);
+    return () => clearTimeout(t);
+  }, [rootLaidOut]);
+
   return (
-    <NavigationThemeProvider value={navTheme}>
-      <Stack
-        screenOptions={{
-          headerStyle: {
-            backgroundColor: theme.colors.bgPrimary,
-          },
-          headerTintColor: theme.colors.textPrimary,
-          contentStyle: {
-            backgroundColor: theme.colors.bgPrimary,
-          },
-        }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-    </NavigationThemeProvider>
+    <View style={{ flex: 1 }} onLayout={onRootLayout}>
+      <NavigationThemeProvider value={navTheme}>
+        <Stack
+          screenOptions={{
+            headerStyle: {
+              backgroundColor: theme.colors.bgPrimary,
+            },
+            headerTintColor: theme.colors.textPrimary,
+            contentStyle: {
+              backgroundColor: theme.colors.bgPrimary,
+            },
+          }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        </Stack>
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      </NavigationThemeProvider>
+
+      {showSplash ? (
+        <SplashOverlay
+          hide={hideSplash}
+          onHidden={() => {
+            setShowSplash(false);
+          }}
+        />
+      ) : null}
+    </View>
   );
 }

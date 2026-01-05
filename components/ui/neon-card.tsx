@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, type ViewProps } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useTheme } from '@/src/context/ThemeContext';
 
@@ -14,41 +15,64 @@ export function NeonCard({ style, active = false, children, ...rest }: Props) {
   const styles = StyleSheet.create({
     card: {
       backgroundColor: theme.colors.card,
-      borderRadius: 12,
-      borderWidth: active ? 1.5 : 1,
-      borderColor: isDark && active ? theme.colors.accent : theme.colors.border,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: isDark ? theme.tiles.insetBorder : theme.colors.border,
       overflow: 'hidden',
 
-      ...(isDark && active
+      ...(isDark
         ? {
-            shadowColor: theme.colors.accent,
-            shadowOpacity: 0.18,
-            shadowRadius: 16,
-            shadowOffset: { width: 0, height: 0 },
-            elevation: 8,
+            shadowColor: theme.colors.bgPrimary,
+            shadowOpacity: 0.35,
+            shadowRadius: 22,
+            shadowOffset: { width: 0, height: 12 },
+            elevation: 6,
           }
         : {
-            shadowOpacity: 0,
-            shadowRadius: 0,
-            shadowOffset: { width: 0, height: 0 },
-            elevation: 0,
+            shadowOpacity: 0.08,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 6 },
+            elevation: 1,
           }),
     },
-    glowBase: {
+    gradientWash: {
       ...StyleSheet.absoluteFillObject,
-      borderRadius: 12,
-      borderWidth: 1,
+      borderRadius: 20,
+      opacity: isDark ? 1 : 0,
     },
-    glow: {
-      borderColor: theme.colors.accent,
-      backgroundColor: theme.colors.accentSoft,
+    edgeGlow: {
+      ...StyleSheet.absoluteFillObject,
+      borderRadius: 20,
+      opacity: isDark ? (active ? 0.22 : 0.12) : 0,
+      shadowColor: theme.colors.accent,
+      shadowOpacity: isDark ? (active ? 0.22 : 0.16) : 0,
+      shadowRadius: isDark ? (active ? 22 : 16) : 0,
+      shadowOffset: { width: 0, height: 0 },
+      ...(isDark ? { elevation: active ? 10 : 6 } : null),
+    },
+    content: {
+      position: 'relative',
+      zIndex: 1,
     },
   });
 
   return (
     <View style={[styles.card, style]} {...rest}>
-      {active ? <View pointerEvents="none" style={[styles.glowBase, styles.glow]} /> : null}
-      {children}
+      <LinearGradient
+        pointerEvents="none"
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        colors={theme.tiles.primaryGradient}
+        style={styles.gradientWash}
+      />
+      <LinearGradient
+        pointerEvents="none"
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        colors={theme.tiles.edgeGlow}
+        style={styles.edgeGlow}
+      />
+      <View style={styles.content}>{children}</View>
     </View>
   );
 }
