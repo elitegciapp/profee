@@ -5,6 +5,8 @@ import {
   deleteAsync,
   documentDirectory,
   getInfoAsync,
+  makeDirectoryAsync,
+  moveAsync,
 } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 
@@ -27,25 +29,38 @@ function buildFilename(statement: Statement) {
 }
 
 async function ensureNamedPdfUri(sourceUri: string, filename: string): Promise<string> {
-  const dir = cacheDirectory ?? documentDirectory;
-  if (!dir) return sourceUri;
+  const baseDir = documentDirectory ?? cacheDirectory;
+  if (!baseDir) return sourceUri;
+
+  const exportsDir = `${baseDir}profee-exports/`;
+  try {
+    await makeDirectoryAsync(exportsDir, { intermediates: true });
+  } catch {
+    // ignore
+  }
 
   const base = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
   const suffix = (n: number) => (n === 0 ? "" : `_${n}`);
 
   for (let attempt = 0; attempt < 10; attempt += 1) {
-    const candidate = `${dir}${base.replace(/\.pdf$/i, `${suffix(attempt)}.pdf`)}`;
+    const candidate = `${exportsDir}${base.replace(/\.pdf$/i, `${suffix(attempt)}.pdf`)}`;
     const info = await getInfoAsync(candidate);
     if (info.exists) continue;
 
     try {
-      await copyAsync({ from: sourceUri, to: candidate });
-      // Best-effort cleanup; ignore failures.
-      deleteAsync(sourceUri, { idempotent: true }).catch(() => undefined);
+      // Prefer a move so the share sheet uses the destination file name reliably.
+      await moveAsync({ from: sourceUri, to: candidate });
       return candidate;
     } catch {
-      // If copy fails for some reason, fall back to original.
-      return sourceUri;
+      try {
+        await copyAsync({ from: sourceUri, to: candidate });
+        // Best-effort cleanup; ignore failures.
+        deleteAsync(sourceUri, { idempotent: true }).catch(() => undefined);
+        return candidate;
+      } catch {
+        // If we can't rename, fall back to original (random print filename).
+        return sourceUri;
+      }
     }
   }
 
