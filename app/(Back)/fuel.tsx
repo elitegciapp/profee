@@ -4,7 +4,6 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { NeonCard } from "@/components/ui/neon-card";
 import { NeonInput } from "@/components/ui/neon-input";
-import { SectionHeader } from "@/components/ui/section-header";
 import { useTheme } from "@/src/context/ThemeContext";
 import { LinearGradient } from "expo-linear-gradient";
 import type { FuelTank } from "@/src/models/fuelProration";
@@ -139,6 +138,7 @@ export default function FuelScreen() {
   const [tanks, setTanks] = useState<FuelTank[]>([]);
   const [includeInStatement, setIncludeInStatement] = useState<boolean>(initial.includeInStatement);
   const [exportFuelOnly, setExportFuelOnly] = useState<boolean>(initial.exportFuelOnly);
+  const [creditToBuyer, setCreditToBuyer] = useState<boolean>(initial.creditTo === "buyer");
   const [priceInputById, setPriceInputById] = useState<Record<string, string>>({});
 
   const { tankResults, totalCredit } = useMemo(() => calculateFuelProration(tanks), [tanks]);
@@ -159,8 +159,14 @@ export default function FuelScreen() {
   }, [tankResults]);
 
   useEffect(() => {
-    setFuelProrationSession({ includeInStatement, exportFuelOnly, totalCredit, totalPercent });
-  }, [includeInStatement, exportFuelOnly, totalCredit, totalPercent]);
+    setFuelProrationSession({
+      includeInStatement,
+      exportFuelOnly,
+      totalCredit,
+      totalPercent,
+      creditTo: creditToBuyer ? "buyer" : "seller",
+    });
+  }, [includeInStatement, exportFuelOnly, totalCredit, totalPercent, creditToBuyer]);
 
   function addTank() {
     const id = createId();
@@ -242,14 +248,31 @@ export default function FuelScreen() {
           <ThemedText style={styles.helperText}>
             When enabled, Export/Copy from Fee Statement will use fuel only.
           </ThemedText>
+
+          <View style={styles.divider} />
+
+          <View style={styles.toggleRow}>
+            <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
+              Credited to buyer
+            </ThemedText>
+            <View style={[styles.toggleWrap, creditToBuyer ? styles.toggleWrapOn : undefined]}>
+              <Switch
+                value={creditToBuyer}
+                onValueChange={setCreditToBuyer}
+                thumbColor={theme.colors.textPrimary}
+                trackColor={{ false: theme.colors.border, true: theme.colors.accentSoft }}
+              />
+            </View>
+          </View>
+          <ThemedText style={styles.helperText}>
+            Turn off to credit the seller.
+          </ThemedText>
         </NeonCard>
 
         {tankResults.map((tank) => (
           <NeonCard key={tank.id} style={styles.card}>
             <View style={styles.cardHeaderRow}>
-              <View style={styles.sectionHeaderWrap}>
-                <SectionHeader title="Propane Tank" />
-              </View>
+              <View style={styles.sectionHeaderWrap} />
               <Pressable
                 accessibilityRole="button"
                 onPress={() => removeTank(tank.id)}

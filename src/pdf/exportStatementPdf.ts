@@ -1,13 +1,5 @@
 import * as Print from "expo-print";
-import {
-  cacheDirectory,
-  copyAsync,
-  deleteAsync,
-  documentDirectory,
-  getInfoAsync,
-  makeDirectoryAsync,
-  moveAsync,
-} from "expo-file-system";
+import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 
 import { Statement } from "../models/statement";
@@ -29,12 +21,27 @@ function buildFilename(statement: Statement) {
 }
 
 async function ensureNamedPdfUri(sourceUri: string, filename: string): Promise<string> {
-  const baseDir = documentDirectory ?? cacheDirectory;
+  const fsAny = FileSystem as unknown as {
+    documentDirectory?: string | null;
+    cacheDirectory?: string | null;
+    Paths?: {
+      document?: { uri?: string };
+      cache?: { uri?: string };
+    };
+  };
+
+  const baseDirRaw =
+    fsAny.documentDirectory ??
+    fsAny.cacheDirectory ??
+    fsAny.Paths?.document?.uri ??
+    fsAny.Paths?.cache?.uri;
+
+  const baseDir = typeof baseDirRaw === "string" ? baseDirRaw : null;
   if (!baseDir) return sourceUri;
 
   const exportsDir = `${baseDir}profee-exports/`;
   try {
-    await makeDirectoryAsync(exportsDir, { intermediates: true });
+    await FileSystem.makeDirectoryAsync(exportsDir, { intermediates: true });
   } catch {
     // ignore
   }
@@ -44,18 +51,18 @@ async function ensureNamedPdfUri(sourceUri: string, filename: string): Promise<s
 
   for (let attempt = 0; attempt < 10; attempt += 1) {
     const candidate = `${exportsDir}${base.replace(/\.pdf$/i, `${suffix(attempt)}.pdf`)}`;
-    const info = await getInfoAsync(candidate);
+    const info = await FileSystem.getInfoAsync(candidate);
     if (info.exists) continue;
 
     try {
       // Prefer a move so the share sheet uses the destination file name reliably.
-      await moveAsync({ from: sourceUri, to: candidate });
+      await FileSystem.moveAsync({ from: sourceUri, to: candidate });
       return candidate;
     } catch {
       try {
-        await copyAsync({ from: sourceUri, to: candidate });
+        await FileSystem.copyAsync({ from: sourceUri, to: candidate });
         // Best-effort cleanup; ignore failures.
-        deleteAsync(sourceUri, { idempotent: true }).catch(() => undefined);
+        FileSystem.deleteAsync(sourceUri, { idempotent: true }).catch(() => undefined);
         return candidate;
       } catch {
         // If we can't rename, fall back to original (random print filename).
@@ -69,7 +76,7 @@ async function ensureNamedPdfUri(sourceUri: string, filename: string): Promise<s
 
 export async function exportStatementPdf(
   statement: Statement,
-  options?: { fuelProrationCredit?: number; fuelProrationPercent?: number }
+  options?: { fuelProrationCredit?: number; fuelProrationPercent?: number; fuelProrationCreditTo?: "buyer" | "seller" }
 ) {
   const html = buildStatementHtml(statement, options);
   const desiredFilename = buildFilename(statement);

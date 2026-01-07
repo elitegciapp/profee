@@ -12,6 +12,7 @@ function money(value: number): string {
 export function buildFuelOnlyHtml(fuel: FuelProrationSummary): string {
   const percent = Math.round(clampNumber(fuel.totalPercent, 0, 100));
   const credit = Number.isFinite(fuel.totalCredit) ? Math.max(0, fuel.totalCredit) : 0;
+  const creditedTo = fuel.creditTo === "buyer" ? "Buyer" : "Seller";
 
   return `<!doctype html>
 <html lang="en">
@@ -55,6 +56,11 @@ export function buildFuelOnlyHtml(fuel: FuelProrationSummary): string {
   <div class="row">
     <div class="label">Total Fuel Credit</div>
     <div class="value">${money(credit)}</div>
+  </div>
+
+  <div class="row">
+    <div class="label">Credited to</div>
+    <div class="value">${creditedTo}</div>
   </div>
 
   <div class="disclaimer">

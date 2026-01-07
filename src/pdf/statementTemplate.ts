@@ -51,7 +51,7 @@ function fuelBar(percent: number): string {
 /* ---------- template ---------- */
 export function buildStatementHtml(
   statement: Statement,
-  options?: { fuelProrationCredit?: number; fuelProrationPercent?: number }
+  options?: { fuelProrationCredit?: number; fuelProrationPercent?: number; fuelProrationCreditTo?: "buyer" | "seller" }
 ): string {
   const summary = calculateStatementSummary(statement);
 
@@ -60,6 +60,7 @@ export function buildStatementHtml(
     Number.isFinite(fuelProrationCredit) && (fuelProrationCredit ?? 0) > 0;
 
   const fuelProrationPercent = clampNumber(options?.fuelProrationPercent ?? 0, 0, 100);
+  const fuelProrationCreditTo = options?.fuelProrationCreditTo === "buyer" ? "Buyer" : "Seller";
 
   const address = statement.propertyAddress
     ? escapeHtml(statement.propertyAddress)
@@ -222,7 +223,7 @@ export function buildStatementHtml(
       ? `
         <h2>Disbursements</h2>
         <div class="row">
-          <div class="label">Fuel Proration Credit (to Buyer)</div>
+          <div class="label">Fuel Proration Credit (to ${fuelProrationCreditTo})</div>
           <div class="value">${money(fuelProrationCredit)}</div>
         </div>
         ${fuelBar(fuelProrationPercent)}

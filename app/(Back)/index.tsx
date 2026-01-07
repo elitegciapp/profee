@@ -82,6 +82,10 @@ export default function FeeStatementScreen() {
   const exportMode: "full" | "fuel-only" = fuelSnapshot.exportFuelOnly ? "fuel-only" : "full";
 
   const styles = StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: theme.colors.bgPrimary,
+    },
     scroll: {
       flex: 1,
       backgroundColor: theme.colors.bgPrimary,
@@ -93,6 +97,11 @@ export default function FeeStatementScreen() {
     container: {
       padding: 16,
       paddingBottom: 28,
+      gap: 16,
+    },
+    staticHeader: {
+      padding: 16,
+      paddingBottom: 0,
       gap: 16,
     },
     actionsGrid: {
@@ -369,7 +378,7 @@ export default function FeeStatementScreen() {
     }, [])
   );
 
-  function getFuelOnlyDataOrAlert(): { totalCredit: number; totalPercent: number } | null {
+  function getFuelOnlyDataOrAlert(): { totalCredit: number; totalPercent: number; creditTo?: "buyer" | "seller" } | null {
     const snapshot = getFuelProrationSession();
     setFuelSnapshot(snapshot);
 
@@ -387,6 +396,7 @@ export default function FeeStatementScreen() {
     return {
       totalCredit: credit,
       totalPercent: Math.max(0, Math.min(100, percent)),
+      creditTo: snapshot.creditTo,
     };
   }
 
@@ -526,11 +536,7 @@ export default function FeeStatementScreen() {
   const summary = calculateStatementSummary(statement);
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
-    >
+    <ThemedView style={styles.screen}>
       <LinearGradient
         pointerEvents="none"
         start={{ x: 0, y: 0 }}
@@ -538,9 +544,11 @@ export default function FeeStatementScreen() {
         colors={theme.tiles.backgroundGradient}
         style={styles.screenGradient}
       />
-      <ThemedText type="title">Fee Statement</ThemedText>
 
-      <ThemedView style={styles.actionsGrid}>
+      <ThemedView style={styles.staticHeader}>
+        <ThemedText type="title">Fee Statement</ThemedText>
+
+        <ThemedView style={styles.actionsGrid}>
         <ThemedView style={styles.actionsRow}>
           <Pressable
             accessibilityRole="button"
@@ -690,6 +698,14 @@ export default function FeeStatementScreen() {
           {saveStatus === "error" ? <ThemedText style={styles.statusBad}>Save failed</ThemedText> : null}
         </ThemedView>
       </ThemedView>
+
+      </ThemedView>
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
 
       <FintechTile
         title="Fee Statement"
@@ -1051,6 +1067,7 @@ export default function FeeStatementScreen() {
           </>
         ) : null}
       </NeonCard>
-    </ScrollView>
+      </ScrollView>
+    </ThemedView>
   );
 }

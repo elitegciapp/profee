@@ -14,7 +14,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {
 });
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  anchor: '(Back)',
 };
 
 export default function RootLayout() {
@@ -78,11 +78,12 @@ function RootNavigation() {
               backgroundColor: theme.colors.bgPrimary,
             },
             headerTintColor: theme.colors.textPrimary,
+            headerBackTitle: 'Back',
             contentStyle: {
               backgroundColor: theme.colors.bgPrimary,
             },
           }}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(Back)" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />

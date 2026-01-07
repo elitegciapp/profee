@@ -3,6 +3,7 @@ type FuelProrationSessionState = {
   exportFuelOnly: boolean;
   totalCredit: number;
   totalPercent: number;
+  creditTo: "buyer" | "seller";
 };
 
 let state: FuelProrationSessionState = {
@@ -10,6 +11,7 @@ let state: FuelProrationSessionState = {
   exportFuelOnly: false,
   totalCredit: 0,
   totalPercent: 0,
+  creditTo: "seller",
 };
 
 export function getFuelProrationSession(): FuelProrationSessionState {
@@ -23,6 +25,7 @@ export function setFuelProrationSession(next: Partial<FuelProrationSessionState>
 export function getFuelProrationStatementAddon(): {
   fuelProrationCredit?: number;
   fuelProrationPercent?: number;
+  fuelProrationCreditTo?: "buyer" | "seller";
 } {
   if (!state.includeInStatement) return {};
   if (!Number.isFinite(state.totalCredit) || state.totalCredit <= 0) return {};
@@ -32,5 +35,6 @@ export function getFuelProrationStatementAddon(): {
   return {
     fuelProrationCredit: state.totalCredit,
     fuelProrationPercent: percent,
+    fuelProrationCreditTo: state.creditTo,
   };
 }
