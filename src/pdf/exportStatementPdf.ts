@@ -1,9 +1,14 @@
-import * as Print from "expo-print";
 import * as FileSystem from "expo-file-system";
+import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 
 import { Statement } from "../models/statement";
 import { buildStatementHtml } from "./statementTemplate";
+
+export type StatementPdfResult = {
+  uri: string;
+  filename: string;
+};
 
 function sanitizeFilename(input: string) {
   return input
@@ -21,27 +26,12 @@ function buildFilename(statement: Statement) {
 }
 
 async function ensureNamedPdfUri(sourceUri: string, filename: string): Promise<string> {
-  const fsAny = FileSystem as unknown as {
-    documentDirectory?: string | null;
-    cacheDirectory?: string | null;
-    Paths?: {
-      document?: { uri?: string };
-      cache?: { uri?: string };
-    };
-  };
+  const baseDir = FileSystem.Paths.document ?? FileSystem.Paths.cache;
+  if (!baseDir?.uri) return sourceUri;
 
-  const baseDirRaw =
-    fsAny.documentDirectory ??
-    fsAny.cacheDirectory ??
-    fsAny.Paths?.document?.uri ??
-    fsAny.Paths?.cache?.uri;
-
-  const baseDir = typeof baseDirRaw === "string" ? baseDirRaw : null;
-  if (!baseDir) return sourceUri;
-
-  const exportsDir = `${baseDir}profee-exports/`;
+  const exportsDir = new FileSystem.Directory(baseDir, "profee-exports");
   try {
-    await FileSystem.makeDirectoryAsync(exportsDir, { intermediates: true });
+    exportsDir.create({ intermediates: true, idempotent: true });
   } catch {
     // ignore
   }
@@ -49,21 +39,29 @@ async function ensureNamedPdfUri(sourceUri: string, filename: string): Promise<s
   const base = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
   const suffix = (n: number) => (n === 0 ? "" : `_${n}`);
 
+  const sourceFile = new FileSystem.File(sourceUri);
+
   for (let attempt = 0; attempt < 10; attempt += 1) {
-    const candidate = `${exportsDir}${base.replace(/\.pdf$/i, `${suffix(attempt)}.pdf`)}`;
-    const info = await FileSystem.getInfoAsync(candidate);
-    if (info.exists) continue;
+    const candidate = new FileSystem.File(
+      exportsDir,
+      base.replace(/\.pdf$/i, `${suffix(attempt)}.pdf`)
+    );
+    if (candidate.exists) continue;
 
     try {
       // Prefer a move so the share sheet uses the destination file name reliably.
-      await FileSystem.moveAsync({ from: sourceUri, to: candidate });
-      return candidate;
+      sourceFile.move(candidate);
+      return candidate.uri;
     } catch {
       try {
-        await FileSystem.copyAsync({ from: sourceUri, to: candidate });
+        sourceFile.copy(candidate);
         // Best-effort cleanup; ignore failures.
-        FileSystem.deleteAsync(sourceUri, { idempotent: true }).catch(() => undefined);
-        return candidate;
+        try {
+          sourceFile.delete();
+        } catch {
+          // ignore
+        }
+        return candidate.uri;
       } catch {
         // If we can't rename, fall back to original (random print filename).
         return sourceUri;
@@ -76,17 +74,9 @@ async function ensureNamedPdfUri(sourceUri: string, filename: string): Promise<s
 
 export async function exportStatementPdf(
   statement: Statement,
-  options?: { fuelProrationCredit?: number; fuelProrationPercent?: number; fuelProrationCreditTo?: "buyer" | "seller" }
+  options?: { fuelProrationCredit?: number; fuelProrationPercent?: number }
 ) {
-  const html = buildStatementHtml(statement, options);
-  const desiredFilename = buildFilename(statement);
-
-  const result = await Print.printToFileAsync({
-    html,
-    base64: false,
-  });
-
-  const namedUri = await ensureNamedPdfUri(result.uri, desiredFilename);
+  const { uri: namedUri, filename: desiredFilename } = await createStatementPdf(statement, options);
 
   if (!(await Sharing.isAvailableAsync())) {
     throw new Error("Sharing is not available on this device");
@@ -97,4 +87,20 @@ export async function exportStatementPdf(
     UTI: "com.adobe.pdf",
     dialogTitle: desiredFilename,
   });
+}
+
+export async function createStatementPdf(
+  statement: Statement,
+  options?: { fuelProrationCredit?: number; fuelProrationPercent?: number }
+): Promise<StatementPdfResult> {
+  const html = buildStatementHtml(statement, options);
+  const filename = buildFilename(statement);
+
+  const result = await Print.printToFileAsync({
+    html,
+    base64: false,
+  });
+
+  const uri = await ensureNamedPdfUri(result.uri, filename);
+  return { uri, filename };
 }

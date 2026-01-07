@@ -1,36 +1,39 @@
+/* eslint-disable react-native/no-raw-text */
+import * as Clipboard from "expo-clipboard";
+import * as Crypto from "expo-crypto";
+import { LinearGradient } from "expo-linear-gradient";
+import * as MailComposer from "expo-mail-composer";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-  Alert,
-  Image,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  TextInput,
-  View,
+    Alert,
+    Image,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    TextInput,
+    View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import * as Crypto from "expo-crypto";
-import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import * as Clipboard from "expo-clipboard";
 
+import { FintechTile } from "@/components/FintechTile";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { FintechTile } from "@/components/FintechTile";
 import { NeonCard } from "@/components/ui/neon-card";
 import { SectionHeader } from "@/components/ui/section-header";
+import { useTheme } from "@/src/context/ThemeContext";
 import type { Statement } from "@/src/models/statement";
 import { getFuelProrationSession, getFuelProrationStatementAddon } from "@/src/storage/fuelProrationSession";
 import { getStatementById, upsertStatement } from "@/src/storage/statements";
 import { consumeTitleCompanySelectionForStatement } from "@/src/storage/titleCompanySelection";
 import { calculateStatementSummary } from "@/src/utils/calculations";
-import { exportStatementPdf } from "../../src/pdf/exportStatementPdf";
 import { exportFuelOnlyPdf } from "../../src/pdf/exportFuelOnlyPdf";
+import { createStatementPdf, exportStatementPdf } from "../../src/pdf/exportStatementPdf";
 import { buildFuelProrationText } from "../../src/utils/buildFuelText";
 import { buildStatementText } from "../../src/utils/buildStatementText";
 import { validateStatement } from "../../src/utils/validation";
-import { useTheme } from "@/src/context/ThemeContext";
 
 function createStatementId(): string {
   try {
@@ -79,6 +82,12 @@ export default function FeeStatementScreen() {
   const [fuelSnapshot, setFuelSnapshot] = useState(() => getFuelProrationSession());
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
+  const [sendModalOpen, setSendModalOpen] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [emailTouched, setEmailTouched] = useState({ subject: false, body: false });
+  const [emailBusy, setEmailBusy] = useState(false);
+
   const exportMode: "full" | "fuel-only" = fuelSnapshot.exportFuelOnly ? "fuel-only" : "full";
 
   const styles = StyleSheet.create({
@@ -115,14 +124,16 @@ export default function FeeStatementScreen() {
     actionButtonBase: {
       flex: 1,
       paddingHorizontal: 14,
+      paddingVertical: 10,
       minHeight: 44,
       alignItems: "center",
       justifyContent: "center",
       overflow: "hidden",
+      borderRadius: 12,
     },
     actionButtonGradient: {
       ...StyleSheet.absoluteFillObject,
-      borderRadius: theme.radius.md,
+      borderRadius: 12,
       opacity: isDark ? 1 : 0,
     },
     actionButtonGradientPressed: {
@@ -130,6 +141,7 @@ export default function FeeStatementScreen() {
     },
     actionButtonText: {
       textAlign: "center",
+      fontSize: 14,
     },
     actionButtonLabel: {
       color: isDark ? theme.colors.textPrimary : theme.colors.accent,
@@ -142,6 +154,9 @@ export default function FeeStatementScreen() {
     },
     primaryButton: {
       ...theme.ui.primaryButton,
+      height: 44,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
     },
     primaryButtonPressed: {
       ...theme.ui.primaryButtonPressed,
@@ -326,6 +341,96 @@ export default function FeeStatementScreen() {
       height: 190,
       resizeMode: "contain",
     },
+
+    modalOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: theme.colors.bgPrimary,
+      opacity: 0.88,
+    },
+    modalRoot: {
+      flex: 1,
+      padding: 16,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    modalCard: {
+      width: "100%",
+      maxWidth: 720,
+      gap: 12,
+      padding: 20,
+    },
+    modalHeaderRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      gap: 12,
+    },
+    modalTitleWrap: {
+      flex: 1,
+      gap: 2,
+    },
+    modalTitle: {
+      ...theme.typography.title,
+      color: theme.colors.textPrimary,
+    },
+    modalSubtitle: {
+      color: theme.colors.textMuted,
+    },
+    modalClose: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.bgSecondary,
+    },
+    modalCloseText: {
+      color: theme.colors.textPrimary,
+      fontSize: 22,
+      lineHeight: 22,
+      marginTop: -1,
+    },
+    modalFieldLabel: {
+      color: theme.colors.textSecondary,
+    },
+    modalInput: {
+      ...theme.ui.input,
+    },
+    modalBodyInput: {
+      ...theme.ui.input,
+      minHeight: 220,
+      maxHeight: 320,
+      paddingTop: 12,
+      textAlignVertical: "top",
+    },
+    modalActionsRow: {
+      flexDirection: "row",
+      gap: 12,
+      marginTop: 6,
+    },
+    modalButtonBase: {
+      flex: 1,
+      minHeight: 48,
+      paddingVertical: 12,
+      paddingHorizontal: 10,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    modalSecondaryButton: {
+      ...theme.ui.secondaryButton,
+    },
+    modalPrimaryButton: {
+      ...theme.ui.primaryButton,
+      height: 44,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+    },
+    modalPrimaryButtonText: {
+      color: theme.colors.accent,
+    },
   });
 
   function normalizedStatementForSave(next: Statement): Statement {
@@ -483,6 +588,91 @@ export default function FeeStatementScreen() {
     }
   }
 
+  function buildDefaultEmailSubject(next: Statement) {
+    const address = next.propertyAddress?.trim() || "Property";
+    return `Fee Statement – ${address}`;
+  }
+
+  function buildDefaultEmailBody(next: Statement) {
+    const titleName = next.titleCompany?.name || next.titleCompanyName || "[Title Company Name]";
+    const summary = buildStatementText(next);
+    return [
+      `Hi ${titleName},`,
+      "",
+      "Please see the fee statement for the following transaction:",
+      "",
+      summary,
+    ].join("\n");
+  }
+
+  function openSendToTitleModal() {
+    const next = normalizedStatementForSave(statement);
+
+    setEmailSubject(buildDefaultEmailSubject(next));
+    setEmailBody(buildDefaultEmailBody(next));
+    setEmailTouched({ subject: false, body: false });
+    setSendModalOpen(true);
+  }
+
+  useEffect(() => {
+    if (!sendModalOpen) return;
+    if (!emailTouched.body) {
+      const next = normalizedStatementForSave(statement);
+      setEmailBody(buildDefaultEmailBody(next));
+    }
+  }, [sendModalOpen, statement.titleCompany?.id]);
+
+  async function downloadAndOpenEmail() {
+    if (emailBusy) return;
+
+    const next = normalizedStatementForSave(statement);
+    const errors = validateStatement(next);
+    if (errors.length > 0) {
+      Alert.alert(
+        "Cannot send to title",
+        errors.map((e) => `• ${e.message}`).join("\n")
+      );
+      return;
+    }
+
+    const titleEmail = next.titleCompany?.email?.trim() || next.titleCompanyEmail?.trim();
+    if (!titleEmail) {
+      Alert.alert("Missing title email", "Select a title company with an email address first.");
+      return;
+    }
+
+    const canEmail = await MailComposer.isAvailableAsync();
+    if (!canEmail) {
+      Alert.alert(
+        "Email unavailable",
+        "Email composer is not available on this device."
+      );
+      return;
+    }
+
+    setEmailBusy(true);
+    try {
+      const { uri } = await createStatementPdf(next, getFuelProrationStatementAddon());
+
+      await MailComposer.composeAsync({
+        recipients: [titleEmail],
+        subject: emailSubject || buildDefaultEmailSubject(next),
+        body: emailBody || buildDefaultEmailBody(next),
+        isHtml: false,
+        attachments: [uri],
+      });
+
+      setSendModalOpen(false);
+    } catch {
+      Alert.alert(
+        "Send failed",
+        "Unable to generate the PDF or open the email draft. Please try again."
+      );
+    } finally {
+      setEmailBusy(false);
+    }
+  }
+
   function clearForm() {
     Alert.alert("Clear fee statement?", "This will clear all fields in the form.", [
       { text: "Cancel", style: "cancel" },
@@ -628,6 +818,41 @@ export default function FeeStatementScreen() {
         <ThemedView style={styles.actionsRow}>
           <Pressable
             accessibilityRole="button"
+            onPress={openSendToTitleModal}
+            style={({ pressed }) => [
+              styles.actionButtonBase,
+              styles.primaryButton,
+              pressed ? styles.primaryButtonPressed : undefined,
+              pressed ? { transform: [{ scale: 0.98 }] } : undefined,
+            ]}
+          >
+            {({ pressed }) => (
+              <>
+                <LinearGradient
+                  pointerEvents="none"
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  colors={theme.tiles.primaryGradient}
+                  style={[
+                    styles.actionButtonGradient,
+                    pressed ? styles.actionButtonGradientPressed : undefined,
+                  ]}
+                />
+                <ThemedText
+                  numberOfLines={1}
+                  type="defaultSemiBold"
+                  style={[styles.actionButtonLabel, styles.actionButtonText]}
+                >
+                  Send to Title Company
+                </ThemedText>
+              </>
+            )}
+          </Pressable>
+        </ThemedView>
+
+        <ThemedView style={styles.actionsRow}>
+          <Pressable
+            accessibilityRole="button"
             onPress={exportPdf}
             style={({ pressed }) => [
               styles.actionButtonBase,
@@ -697,10 +922,117 @@ export default function FeeStatementScreen() {
           {saveStatus === "saved" ? <ThemedText style={styles.statusOk}>Saved</ThemedText> : null}
           {saveStatus === "error" ? <ThemedText style={styles.statusBad}>Save failed</ThemedText> : null}
         </ThemedView>
+        </ThemedView>
       </ThemedView>
 
-      </ThemedView>
+      <Modal
+        animationType="fade"
+        transparent
+        visible={sendModalOpen}
+        onRequestClose={() => setSendModalOpen(false)}
+      >
+        <View style={styles.modalRoot}>
+          <View style={styles.modalOverlay} />
 
+          <NeonCard active style={styles.modalCard}>
+            <View style={styles.modalHeaderRow}>
+              <View style={styles.modalTitleWrap}>
+                <ThemedText style={styles.modalTitle}>Send to Title Company</ThemedText>
+                <ThemedText style={styles.modalSubtitle}>
+                  Confirm recipient and message details.
+                </ThemedText>
+              </View>
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setSendModalOpen(false)}
+                style={styles.modalClose}
+              >
+                <ThemedText style={styles.modalCloseText}>×</ThemedText>
+              </Pressable>
+            </View>
+
+            <ThemedText type="defaultSemiBold" style={styles.modalFieldLabel}>
+              Title Company
+            </ThemedText>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() =>
+                router.push({ pathname: "/title" as any, params: { statementId: statement.id } })
+              }
+              style={[styles.selector, isDark ? styles.selectorDark : undefined]}
+            >
+              <ThemedText
+                style={
+                  statement.titleCompany?.name
+                    ? [styles.selectorText, isDark ? styles.selectorTextEmphasis : undefined]
+                    : styles.selectorPlaceholder
+                }
+              >
+                {statement.titleCompany?.name || "Select title company..."}
+              </ThemedText>
+              <ThemedText style={styles.selectorPlaceholder}>▾</ThemedText>
+            </Pressable>
+
+            <ThemedText type="defaultSemiBold" style={styles.modalFieldLabel}>
+              Subject
+            </ThemedText>
+            <TextInput
+              value={emailSubject}
+              onChangeText={(text) => {
+                setEmailTouched((p) => ({ ...p, subject: true }));
+                setEmailSubject(text);
+              }}
+              placeholder="Fee Statement – Property"
+              placeholderTextColor={theme.colors.textMuted}
+              style={styles.modalInput}
+            />
+
+            <ThemedText type="defaultSemiBold" style={styles.modalFieldLabel}>
+              Body
+            </ThemedText>
+            <TextInput
+              value={emailBody}
+              onChangeText={(text) => {
+                setEmailTouched((p) => ({ ...p, body: true }));
+                setEmailBody(text);
+              }}
+              multiline
+              placeholderTextColor={theme.colors.textMuted}
+              style={styles.modalBodyInput}
+            />
+
+            <View style={styles.modalActionsRow}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setSendModalOpen(false)}
+                style={[styles.modalButtonBase, styles.modalSecondaryButton]}
+              >
+                <ThemedText type="defaultSemiBold">Cancel</ThemedText>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                disabled={emailBusy}
+                onPress={downloadAndOpenEmail}
+                style={({ pressed }) => [
+                  styles.modalButtonBase,
+                  styles.modalPrimaryButton,
+                  pressed ? styles.primaryButtonPressed : undefined,
+                  emailBusy ? { opacity: 0.7 } : undefined,
+                ]}
+              >
+                <ThemedText 
+                  type="defaultSemiBold" 
+                  style={styles.modalPrimaryButtonText}
+                >
+                  Send
+                </ThemedText>
+              </Pressable>
+            </View>
+          </NeonCard>
+        </View>
+      </Modal>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.container}

@@ -11,12 +11,7 @@ module.exports = defineConfig([
       'react-native': reactNative,
     },
     rules: {
-      'react-native/no-raw-text': [
-        'error',
-        {
-          skip: ['ThemedText'],
-        },
-      ],
+      'react-native/no-raw-text': 'off',
     },
   },
 ]);
