@@ -25,6 +25,23 @@ jobs:
         run: |
           brew install imagemagick
 
+      - name: Prepare iOS project (prebuild + pods)
+        run: |
+          npx expo prebuild --platform ios --no-install --non-interactive
+          cd ios
+          pod install --repo-update
+          cd ..
+
+      - name: Start Metro server (dev client)
+        run: |
+          npx expo start --dev-client --non-interactive &
+          sleep 10
+
+      - name: Build and launch app in iPad Pro simulator
+        run: |
+          npx expo run:ios --simulator "iPad Pro (12.9-inch)" --non-interactive &
+          sleep 120
+
       - name: List simulators (debug)
         run: |
           xcrun simctl list devices
