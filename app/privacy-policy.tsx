@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack } from 'expo-router';
 
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/src/context/ThemeContext';
 
 const PRIVACY_POLICY_TEXT = `ProFee (“the App”) is a professional fee statement and calculation tool designed for real estate agents and brokers. Your privacy is important. This Privacy Policy explains what information the App does and does not collect, and how information is handled.
@@ -87,6 +88,7 @@ function LegalText({ text, color }: { text: string; color: string }) {
 
 export default function PrivacyPolicyScreen() {
   const { theme } = useTheme();
+  const responsive = useResponsive();
 
   const styles = StyleSheet.create({
     screen: {
@@ -94,8 +96,11 @@ export default function PrivacyPolicyScreen() {
       backgroundColor: theme.colors.bgPrimary,
     },
     container: {
-      padding: 16,
+      padding: responsive.horizontalPadding,
       paddingBottom: 28,
+      alignSelf: "center",
+      width: "100%",
+      maxWidth: responsive.contentMaxWidth,
     },
     section: {
       backgroundColor: theme.colors.bgSecondary,

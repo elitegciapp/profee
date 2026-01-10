@@ -11,6 +11,7 @@ import { NeonInput } from "@/components/ui/neon-input";
 import type { TitleCompany } from "@/src/models/titleCompany";
 import { getAllTitleCompanies, saveTitleCompany } from "@/src/storage/titleCompanies";
 import { setTitleCompanySelectionForStatement } from "@/src/storage/titleCompanySelection";
+import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/src/context/ThemeContext";
 
 function createId(): string {
@@ -27,6 +28,7 @@ function normalizeKey(name: string, email: string) {
 
 export default function TitleCompaniesScreen() {
   const { theme } = useTheme();
+  const responsive = useResponsive();
   const router = useRouter();
   const params = useLocalSearchParams<{ statementId?: string }>();
 
@@ -51,9 +53,12 @@ export default function TitleCompaniesScreen() {
       opacity: 1,
     },
     container: {
-      padding: 16,
+      padding: responsive.horizontalPadding,
       paddingBottom: 28,
-      gap: 12,
+      gap: responsive.cardSpacing,
+      alignSelf: "center",
+      width: "100%",
+      maxWidth: responsive.contentMaxWidth,
     },
     card: {
       padding: 16,

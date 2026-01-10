@@ -3,20 +3,26 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ThemedView } from "@/components/themed-view";
 import { NeonCard } from "@/components/ui/neon-card";
+import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/src/context/ThemeContext";
 
 export default function ModalScreen() {
   const { theme } = useTheme();
+  const responsive = useResponsive();
 
   const styles = StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: theme.colors.bgPrimary,
-      padding: 16,
+      padding: responsive.horizontalPadding,
       justifyContent: "center",
+      alignItems: "center",
     },
     card: {
       gap: 10,
+      width: "100%",
+      maxWidth: responsive.isPhone ? responsive.width - 32 : 600,
+      padding: responsive.isPhone ? 16 : 20,
     },
     title: {
       ...theme.typography.title,

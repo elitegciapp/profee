@@ -4,6 +4,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { NeonCard } from "@/components/ui/neon-card";
 import { NeonInput } from "@/components/ui/neon-input";
+import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/src/context/ThemeContext";
 import { LinearGradient } from "expo-linear-gradient";
 import type { FuelTank } from "@/src/models/fuelProration";
@@ -22,6 +23,7 @@ function formatMoney(value: number): string {
 export default function FuelScreen() {
   const { theme, colorScheme } = useTheme();
   const isDark = colorScheme === "dark";
+  const responsive = useResponsive();
   const initial = getFuelProrationSession();
 
   const styles = StyleSheet.create({
@@ -34,9 +36,12 @@ export default function FuelScreen() {
       opacity: 1,
     },
     container: {
-      padding: 16,
+      padding: responsive.horizontalPadding,
       paddingBottom: 28,
-      gap: 12,
+      gap: responsive.cardSpacing,
+      alignSelf: "center",
+      width: "100%",
+      maxWidth: responsive.contentMaxWidth,
     },
     card: {
       padding: 16,

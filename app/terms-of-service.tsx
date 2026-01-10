@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack } from 'expo-router';
 
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/src/context/ThemeContext';
 
 const TERMS_OF_SERVICE_TEXT = `ProFee – Terms of Service  
@@ -100,6 +101,7 @@ function LegalText({ text, color }: { text: string; color: string }) {
 
 export default function TermsOfServiceScreen() {
   const { theme } = useTheme();
+  const responsive = useResponsive();
 
   const styles = StyleSheet.create({
     screen: {
@@ -107,8 +109,11 @@ export default function TermsOfServiceScreen() {
       backgroundColor: theme.colors.bgPrimary,
     },
     container: {
-      padding: 16,
+      padding: responsive.horizontalPadding,
       paddingBottom: 28,
+      alignSelf: "center",
+      width: "100%",
+      maxWidth: responsive.contentMaxWidth,
     },
     section: {
       backgroundColor: theme.colors.bgSecondary,

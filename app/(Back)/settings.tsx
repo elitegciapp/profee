@@ -7,10 +7,12 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { NeonCard } from '@/components/ui/neon-card';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/src/context/ThemeContext';
 
 export default function SettingsScreen() {
   const { theme, mode, setMode } = useTheme();
+  const responsive = useResponsive();
 
   const styles = StyleSheet.create({
     screen: {
@@ -22,9 +24,12 @@ export default function SettingsScreen() {
       opacity: 1,
     },
     container: {
-      padding: 16,
+      padding: responsive.horizontalPadding,
       paddingBottom: 28,
-      gap: 12,
+      gap: responsive.cardSpacing,
+      alignSelf: "center",
+      width: "100%",
+      maxWidth: responsive.contentMaxWidth,
     },
     appearanceCard: {
       padding: 16,

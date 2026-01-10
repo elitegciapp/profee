@@ -3,6 +3,7 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import Constants from 'expo-constants';
 import { Stack, router } from 'expo-router';
 
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/src/context/ThemeContext';
 
 function getVersionInfo() {
@@ -46,6 +47,7 @@ function NavRow({ label, valueColor, labelColor }: { label: string; valueColor: 
 
 export default function LegalAppInfoScreen() {
   const { theme } = useTheme();
+  const responsive = useResponsive();
   const info = useMemo(() => getVersionInfo(), []);
 
   const styles = StyleSheet.create({
@@ -54,9 +56,12 @@ export default function LegalAppInfoScreen() {
       backgroundColor: theme.colors.bgPrimary,
     },
     container: {
-      padding: 16,
+      padding: responsive.horizontalPadding,
       paddingBottom: 28,
-      gap: 16,
+      gap: responsive.cardSpacing,
+      alignSelf: "center",
+      width: "100%",
+      maxWidth: responsive.contentMaxWidth,
     },
     section: {
       backgroundColor: theme.colors.bgSecondary,

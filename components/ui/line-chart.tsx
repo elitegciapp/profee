@@ -1,27 +1,37 @@
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { line, curveCatmullRom } from 'd3-shape';
 
 import { ThemedText } from '@/components/themed-text';
+import { useResponsive } from '@/hooks/use-responsive';
 import { useTheme } from '@/src/context/ThemeContext';
 
 type Props = {
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
   points: number[];
   label?: string;
   onPointPress?: (index: number, value: number) => void;
 };
 
 export function LineChart({
-  width,
-  height,
+  width: propsWidth,
+  height: propsHeight = 180,
   points,
   label,
   onPointPress,
 }: Props) {
   const { theme } = useTheme();
+  const responsive = useResponsive();
+  const dimensions = useWindowDimensions();
+  
+  // Default to responsive width if not provided
+  const width = propsWidth ?? Math.min(
+    responsive.contentMaxWidth - (responsive.horizontalPadding * 2),
+    dimensions.width - (responsive.horizontalPadding * 2)
+  );
+  const height = propsHeight;
 
   const { path, xs, ys } = useMemo(() => {
     const safe = points.length > 1 ? points : [0, ...(points.length ? points : [0])];

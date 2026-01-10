@@ -23,6 +23,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { NeonCard } from "@/components/ui/neon-card";
 import { SectionHeader } from "@/components/ui/section-header";
+import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/src/context/ThemeContext";
 import type { Statement } from "@/src/models/statement";
 import { getFuelProrationSession, getFuelProrationStatementAddon } from "@/src/storage/fuelProrationSession";
@@ -75,6 +76,7 @@ function money(value: number): string {
 export default function FeeStatementScreen() {
   const { theme, colorScheme } = useTheme();
   const isDark = colorScheme === "dark";
+  const responsive = useResponsive();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const [statement, setStatement] = useState<Statement>(() => createEmptyStatement());
@@ -104,14 +106,20 @@ export default function FeeStatementScreen() {
       opacity: 1,
     },
     container: {
-      padding: 16,
+      padding: responsive.horizontalPadding,
       paddingBottom: 28,
-      gap: 16,
+      gap: responsive.cardSpacing,
+      alignSelf: "center",
+      width: "100%",
+      maxWidth: responsive.contentMaxWidth,
     },
     staticHeader: {
-      padding: 16,
+      padding: responsive.horizontalPadding,
       paddingBottom: 0,
       gap: 16,
+      alignSelf: "center",
+      width: "100%",
+      maxWidth: responsive.contentMaxWidth,
     },
     actionsGrid: {
       gap: 12,
@@ -349,15 +357,15 @@ export default function FeeStatementScreen() {
     },
     modalRoot: {
       flex: 1,
-      padding: 16,
+      padding: responsive.horizontalPadding,
       alignItems: "center",
       justifyContent: "center",
     },
     modalCard: {
       width: "100%",
-      maxWidth: 720,
+      maxWidth: responsive.isPhone ? responsive.width - 32 : 720,
       gap: 12,
-      padding: 20,
+      padding: responsive.isPhone ? 16 : 20,
     },
     modalHeaderRow: {
       flexDirection: "row",

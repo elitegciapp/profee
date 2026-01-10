@@ -8,10 +8,12 @@ import { ThemedView } from "@/components/themed-view";
 import { NeonCard } from "@/components/ui/neon-card";
 import type { Statement } from "@/src/models/statement";
 import { deleteStatement, getAllStatements } from "@/src/storage/statements";
+import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/src/context/ThemeContext";
 
 export default function HistoryScreen() {
   const { theme } = useTheme();
+  const responsive = useResponsive();
   const router = useRouter();
   const [statements, setStatements] = useState<Statement[]>([]);
 
@@ -25,9 +27,21 @@ export default function HistoryScreen() {
       opacity: 1,
     },
     container: {
-      padding: 16,
+      padding: responsive.horizontalPadding,
       paddingBottom: 28,
-      gap: 12,
+      gap: responsive.cardSpacing,
+      alignSelf: "center",
+      width: "100%",
+      maxWidth: responsive.contentMaxWidth,
+    },
+    gridContainer: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: responsive.cardSpacing,
+      marginTop: responsive.cardSpacing,
+    },
+    gridItem: {
+      width: responsive.isPhone ? "100%" : `${(100 / responsive.numColumns) - (responsive.cardSpacing * (responsive.numColumns - 1) / responsive.numColumns)}%`,
     },
     emptyText: {
       color: theme.colors.textMuted,
@@ -103,30 +117,34 @@ export default function HistoryScreen() {
           <ThemedText style={styles.emptyText}>No saved statements yet.</ThemedText>
         )}
 
-        {statements.map((s) => (
-          <NeonCard key={s.id} style={styles.card}>
-            <ThemedText type="defaultSemiBold">
-              {s.propertyAddress || "Untitled Statement"}
-            </ThemedText>
+        <View style={styles.gridContainer}>
+          {statements.map((s) => (
+            <View key={s.id} style={styles.gridItem}>
+              <NeonCard style={styles.card}>
+                <ThemedText type="defaultSemiBold">
+                  {s.propertyAddress || "Untitled Statement"}
+                </ThemedText>
 
-            <ThemedText style={styles.metaText}>
-              {new Date(s.createdAt).toLocaleString()}
-            </ThemedText>
+                <ThemedText style={styles.metaText}>
+                  {new Date(s.createdAt).toLocaleString()}
+                </ThemedText>
 
-            <View style={styles.actions}>
-              <Button
-                label="Open"
-                onPress={() =>
-                  router.push({
-                    pathname: "/",
-                    params: { id: s.id },
-                  })
-                }
-              />
-              <Button label="Delete" tone="danger" onPress={() => confirmDelete(s.id)} />
+                <View style={styles.actions}>
+                  <Button
+                    label="Open"
+                    onPress={() =>
+                      router.push({
+                        pathname: "/",
+                        params: { id: s.id },
+                      })
+                    }
+                  />
+                  <Button label="Delete" tone="danger" onPress={() => confirmDelete(s.id)} />
+                </View>
+              </NeonCard>
             </View>
-          </NeonCard>
-        ))}
+          ))}
+        </View>
       </ScrollView>
     </ThemedView>
   );
