@@ -40,7 +40,24 @@ function ensureDir(dir) {
   }
 }
 
-function getIpadProUdid() {
+function getLatestIosRuntimeId() {
+  try {
+    const output = execSync("xcrun simctl list runtimes --json", { encoding: "utf-8" });
+    const data = JSON.parse(output);
+    const ios = (data.runtimes || []).filter((r) =>
+      (r.platform || r.platformName) === "iOS" && (r.availability === "available" || r.isAvailable)
+    );
+    if (!ios.length) throw new Error("No available iOS runtimes found");
+    // Pick the latest by version
+    ios.sort((a, b) => String(a.version).localeCompare(String(b.version)));
+    const latest = ios[ios.length - 1];
+    return latest.identifier;
+  } catch (err) {
+    throw new Error(`Unable to resolve iOS runtime: ${err.message}`);
+  }
+}
+
+function ensureIpadProSimulator() {
   try {
     const output = execSync("xcrun simctl list devices --json", { encoding: "utf-8" });
     const data = JSON.parse(output);
@@ -59,7 +76,15 @@ function getIpadProUdid() {
       if (found) return found.udid;
     }
 
-    throw new Error("No iPad Pro 12.9\" simulator found");
+    // If not found, create one using latest iOS runtime
+    const runtimeId = getLatestIosRuntimeId();
+    console.log(`🆕 Creating iPad Pro (12.9-inch) simulator with runtime: ${runtimeId}`);
+    const udid = execSync(
+      `xcrun simctl create "ProFee iPad Pro 12.9" "iPad Pro (12.9-inch)" ${runtimeId}`,
+      { encoding: "utf-8" }
+    ).trim();
+    if (!udid) throw new Error("Simulator creation returned empty UDID");
+    return udid;
   } catch (err) {
     console.error("❌ Failed to find an iPad Pro simulator:", err.message);
     console.log("\nTip: Create one via Xcode > Devices & Simulators, or CLI.");
@@ -83,6 +108,8 @@ function bootSimulator(udid) {
 
     if (state !== "Booted") {
       console.log("📱 Booting simulator...");
+      // Ensure Simulator app is open to avoid boot issues
+      try { execSync("open -a Simulator"); } catch {}
       execSync(`xcrun simctl boot ${udid}`);
       console.log("⏳ Waiting for simulator to boot...");
       execSync("sleep 8");
@@ -127,7 +154,7 @@ async function main() {
   console.log("\n🎬 ProFee App Store Screenshot Generator\n========================================\n");
   ensureDir(SCREENSHOT_DIR);
 
-  const udid = getIpadProUdid();
+  const udid = ensureIpadProSimulator();
   console.log(`✅ Using simulator UDID: ${udid}`);
 
   bootSimulator(udid);
