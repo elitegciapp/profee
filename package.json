@@ -8,7 +8,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "screenshots": "node ./scripts/generate-screenshots.js",
+    "screenshots:ipad": "xcrun simctl screenshot booted ./app-store-screenshots/manual-ipad.png"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
