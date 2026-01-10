@@ -25,6 +25,14 @@ jobs:
         run: |
           brew install imagemagick
 
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
       - name: Prepare iOS project (prebuild + pods)
         run: |
           npx expo prebuild --platform ios --no-install --non-interactive
