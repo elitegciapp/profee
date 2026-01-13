@@ -26,7 +26,11 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/src/context/ThemeContext";
 import type { Statement } from "@/src/models/statement";
-import { getFuelProrationSession, getFuelProrationStatementAddon } from "@/src/storage/fuelProrationSession";
+import {
+  getFuelProrationSession,
+  getFuelProrationStatementAddon,
+  hydrateFuelProrationSession,
+} from "@/src/storage/fuelProrationSession";
 import { getStatementById, upsertStatement } from "@/src/storage/statements";
 import { consumeTitleCompanySelectionForStatement } from "@/src/storage/titleCompanySelection";
 import { calculateStatementSummary } from "@/src/utils/calculations";
@@ -487,13 +491,43 @@ export default function FeeStatementScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      setFuelSnapshot(getFuelProrationSession());
+      let isActive = true;
+
+      hydrateFuelProrationSession()
+        .catch(() => {
+          // ignore hydration failures
+        })
+        .finally(() => {
+          if (!isActive) return;
+          setFuelSnapshot(getFuelProrationSession());
+        });
+
+      return () => {
+        isActive = false;
+      };
     }, [])
   );
 
-  function getFuelOnlyDataOrAlert(): { totalCredit: number; totalPercent: number; creditTo?: "buyer" | "seller" } | null {
+  function getFuelOnlyDataOrAlert(): {
+    totalCredit: number;
+    totalPercent: number;
+    creditTo?: "buyer" | "seller";
+    fuelType?: "oil" | "propane" | "kerosene";
+    fuelCompany?: string;
+    tankOwnership?: "owned" | "leased";
+    gaugePhotoUri?: string;
+  } | null {
     const snapshot = getFuelProrationSession();
     setFuelSnapshot(snapshot);
+
+    const fuelCompany = snapshot.fuelCompany?.trim() || "";
+    if (!snapshot.fuelType || !snapshot.tankOwnership || !fuelCompany) {
+      Alert.alert(
+        "Missing fuel details",
+        "Go to the Fuel tab and fill Fuel Type, Fuel Company, and Tank Ownership before exporting or copying."
+      );
+      return null;
+    }
 
     const credit = Number.isFinite(snapshot.totalCredit) ? snapshot.totalCredit : 0;
     const percent = Number.isFinite(snapshot.totalPercent) ? snapshot.totalPercent : 0;
@@ -510,6 +544,10 @@ export default function FeeStatementScreen() {
       totalCredit: credit,
       totalPercent: Math.max(0, Math.min(100, percent)),
       creditTo: snapshot.creditTo,
+      fuelType: snapshot.fuelType,
+      fuelCompany,
+      tankOwnership: snapshot.tankOwnership,
+      gaugePhotoUri: snapshot.photo?.uri,
     };
   }
 

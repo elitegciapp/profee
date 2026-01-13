@@ -48,10 +48,63 @@ function fuelBar(percent: number): string {
   `;
 }
 
+function fuelTypeLabel(value?: "oil" | "propane" | "kerosene"): string {
+  if (value === "oil") return "Oil";
+  if (value === "propane") return "Propane";
+  if (value === "kerosene") return "Kerosene";
+  return "—";
+}
+
+function tankOwnershipLabel(value?: "owned" | "leased"): string {
+  if (value === "owned") return "Owned";
+  if (value === "leased") return "Leased";
+  return "—";
+}
+
+function gallonsLabel(value?: number): string {
+  if (!Number.isFinite(value) || (value as number) <= 0) return "—";
+  const rounded = Math.round((value as number) * 10) / 10;
+  return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)} gal`;
+}
+
+function moneyPerGallon(value?: number): string {
+  if (!Number.isFinite(value) || (value as number) <= 0) return "—";
+  return `$${(value as number).toFixed(2)}/gal`;
+}
+
+function renderTankDetailRows(tanks?: { gallons: number; pricePerGallon: number }[]): string {
+  if (!Array.isArray(tanks) || tanks.length === 0) return "";
+
+  return tanks
+    .map((t, idx) => {
+      const labelPrefix = tanks.length === 1 ? "Tank" : `Tank ${idx + 1}`;
+      return `
+        <div class="row">
+          <div class="label">${labelPrefix} Gallons</div>
+          <div class="value">${gallonsLabel(t.gallons)}</div>
+        </div>
+        <div class="row">
+          <div class="label">${labelPrefix} Price/gal</div>
+          <div class="value">${moneyPerGallon(t.pricePerGallon)}</div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
 /* ---------- template ---------- */
 export function buildStatementHtml(
   statement: Statement,
-  options?: { fuelProrationCredit?: number; fuelProrationPercent?: number; fuelProrationCreditTo?: "buyer" | "seller" }
+  options?: {
+    fuelProrationCredit?: number;
+    fuelProrationPercent?: number;
+    fuelProrationCreditTo?: "buyer" | "seller";
+    fuelGaugePhotoDataUrl?: string;
+    fuelType?: "oil" | "propane" | "kerosene";
+    fuelCompany?: string;
+    tankOwnership?: "owned" | "leased";
+    tanks?: { gallons: number; pricePerGallon: number }[];
+  }
 ): string {
   const summary = calculateStatementSummary(statement);
 
@@ -61,6 +114,11 @@ export function buildStatementHtml(
 
   const fuelProrationPercent = clampNumber(options?.fuelProrationPercent ?? 0, 0, 100);
   const fuelProrationCreditTo = options?.fuelProrationCreditTo === "buyer" ? "Buyer" : "Seller";
+  const fuelGaugePhotoDataUrl = options?.fuelGaugePhotoDataUrl;
+  const fuelType = options?.fuelType;
+  const fuelCompany = options?.fuelCompany?.trim() || "—";
+  const tankOwnership = options?.tankOwnership;
+  const tanks = options?.tanks;
 
   const address = statement.propertyAddress
     ? escapeHtml(statement.propertyAddress)
@@ -98,19 +156,61 @@ export function buildStatementHtml(
     h2 { font-size: 14px; margin: 18px 0 6px 0; }
     .meta { font-size: 12px; margin-bottom: 16px; }
     .row {
-      display: flex;
-      justify-content: space-between;
+      display: table;
+      width: 100%;
       padding: 6px 0;
       border-bottom: 1px solid #dddddd;
     }
-    .label { color: #111; }
-    .value { font-weight: 600; text-align: right; }
+    .label {
+      color: #111;
+      display: table-cell;
+      padding-right: 12px;
+    }
+    .value {
+      font-weight: 600;
+      text-align: right;
+      display: table-cell;
+      white-space: nowrap;
+    }
+    .valueWrap {
+      font-weight: 600;
+      text-align: right;
+      display: table-cell;
+      white-space: normal;
+      word-break: break-word;
+    }
     .disclaimer {
       margin-top: 18px;
       padding-top: 12px;
       border-top: 1px solid #dddddd;
       font-size: 10px;
       line-height: 1.35;
+    }
+    .twoCol {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+    }
+    .twoColLeft {
+      display: table-cell;
+      vertical-align: top;
+      padding-right: 12px;
+      width: 62%;
+    }
+    .twoColRight {
+      display: table-cell;
+      vertical-align: top;
+      width: 38%;
+      text-align: right;
+    }
+    .photo {
+      display: inline-block;
+      max-width: 180px;
+      max-height: 180px;
+      width: auto;
+      height: auto;
+      border-radius: 6px;
+      border: 1px solid #dddddd;
     }
   </style>
 </head>
@@ -222,11 +322,39 @@ export function buildStatementHtml(
     showFuelProrationCredit
       ? `
         <h2>Disbursements</h2>
-        <div class="row">
-          <div class="label">Fuel Proration Credit (to ${fuelProrationCreditTo})</div>
-          <div class="value">${money(fuelProrationCredit)}</div>
+        <div class="twoCol">
+          <div class="twoColLeft">
+            <div class="row">
+              <div class="label">Fuel Type</div>
+              <div class="value">${fuelTypeLabel(fuelType)}</div>
+            </div>
+            <div class="row">
+              <div class="label">Fuel Company</div>
+              <div class="valueWrap">${escapeHtml(fuelCompany)}</div>
+            </div>
+            <div class="row">
+              <div class="label">Tank Ownership</div>
+              <div class="value">${tankOwnershipLabel(tankOwnership)}</div>
+            </div>
+            ${renderTankDetailRows(tanks)}
+            <div class="row">
+              <div class="label">Fuel Level</div>
+              <div class="value">${Math.round(fuelProrationPercent)}%</div>
+            </div>
+            <div class="row">
+              <div class="label">Fuel Proration Credit (to ${fuelProrationCreditTo})</div>
+              <div class="value">${money(fuelProrationCredit)}</div>
+            </div>
+          </div>
+
+          <div class="twoColRight">
+            ${
+              fuelGaugePhotoDataUrl
+                ? `<img class="photo" src="${fuelGaugePhotoDataUrl}" alt="Fuel gauge photo" />`
+                : ""
+            }
+          </div>
         </div>
-        ${fuelBar(fuelProrationPercent)}
       `
       : ""
   }

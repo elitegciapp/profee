@@ -9,7 +9,7 @@ import { NeonInput } from "@/components/ui/neon-input";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/src/context/ThemeContext";
 import { LinearGradient } from "expo-linear-gradient";
-import type { FuelPhotoAttachment, FuelTank } from "@/src/models/fuelProration";
+import type { FuelPhotoAttachment, FuelTank, FuelType, TankOwnership } from "@/src/models/fuelProration";
 import {
   getFuelProrationSession,
   hydrateFuelProrationSession,
@@ -170,12 +170,16 @@ export default function FuelScreen() {
     },
   });
 
-  const [tanks, setTanks] = useState<FuelTank[]>([]);
+  const [hydrated, setHydrated] = useState(false);
+  const [tanks, setTanks] = useState<FuelTank[]>(() => initial.tanks ?? []);
   const [includeInStatement, setIncludeInStatement] = useState<boolean>(initial.includeInStatement);
   const [exportFuelOnly, setExportFuelOnly] = useState<boolean>(initial.exportFuelOnly);
   const [creditToBuyer, setCreditToBuyer] = useState<boolean>(initial.creditTo === "buyer");
   const [photo, setPhoto] = useState<FuelPhotoAttachment | null>(initial.photo ?? null);
   const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
+  const [fuelType, setFuelType] = useState<FuelType | null>(initial.fuelType ?? null);
+  const [fuelCompany, setFuelCompany] = useState<string>(initial.fuelCompany ?? "");
+  const [tankOwnership, setTankOwnership] = useState<TankOwnership | null>(initial.tankOwnership ?? null);
   const [priceInputById, setPriceInputById] = useState<Record<string, string>>({});
 
   const { tankResults, totalCredit } = useMemo(() => calculateFuelProration(tanks), [tanks]);
@@ -199,25 +203,42 @@ export default function FuelScreen() {
     hydrateFuelProrationSession()
       .then(() => {
         const next = getFuelProrationSession();
+        setTanks(next.tanks ?? []);
         setIncludeInStatement(next.includeInStatement);
         setExportFuelOnly(next.exportFuelOnly);
         setCreditToBuyer(next.creditTo === "buyer");
         setPhoto(next.photo ?? null);
+        setFuelType(next.fuelType ?? null);
+        setFuelCompany(next.fuelCompany ?? "");
+        setTankOwnership(next.tankOwnership ?? null);
+        setHydrated(true);
       })
       .catch(() => {
         // ignore hydration failures
+        setHydrated(true);
       });
   }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
     setFuelProrationSession({
+      tanks,
       includeInStatement,
       exportFuelOnly,
       totalCredit,
       totalPercent,
       creditTo: creditToBuyer ? "buyer" : "seller",
     });
-  }, [includeInStatement, exportFuelOnly, totalCredit, totalPercent, creditToBuyer]);
+  }, [hydrated, tanks, includeInStatement, exportFuelOnly, totalCredit, totalPercent, creditToBuyer]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    setFuelProrationSession({
+      fuelType: fuelType ?? undefined,
+      tankOwnership: tankOwnership ?? undefined,
+      fuelCompany: fuelCompany.trim() ? fuelCompany : undefined,
+    });
+  }, [hydrated, fuelType, tankOwnership, fuelCompany]);
 
   function normalizePickedPhoto(asset: ImagePicker.ImagePickerAsset): FuelPhotoAttachment | null {
     if (!asset?.uri) return null;
@@ -228,6 +249,18 @@ export default function FuelScreen() {
       height: Number.isFinite(asset.height) ? asset.height : 0,
       fileName,
     };
+  }
+
+  function optionStyle(selected: boolean) {
+    return [
+      styles.secondaryButton,
+      {
+        flex: 1,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderColor: selected ? theme.colors.accent : theme.colors.border,
+      },
+    ];
   }
 
   async function attachFromCamera() {
@@ -327,6 +360,59 @@ export default function FuelScreen() {
         <ThemedText type="title">Fuel Proration</ThemedText>
 
         <NeonCard style={styles.card}>
+          <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
+            Fuel Type
+          </ThemedText>
+          <View style={styles.photoActionsRow}>
+            <Pressable accessibilityRole="button" onPress={() => setFuelType("oil")} style={optionStyle(fuelType === "oil")}>
+              <ThemedText type="defaultSemiBold">Oil</ThemedText>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setFuelType("propane")}
+              style={optionStyle(fuelType === "propane")}
+            >
+              <ThemedText type="defaultSemiBold">Propane</ThemedText>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setFuelType("kerosene")}
+              style={optionStyle(fuelType === "kerosene")}
+            >
+              <ThemedText type="defaultSemiBold">Kerosene</ThemedText>
+            </Pressable>
+          </View>
+
+          <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
+            Fuel Company
+          </ThemedText>
+          <NeonInput
+            value={fuelCompany}
+            onChangeText={setFuelCompany}
+            placeholder="e.g. Irving, Dead River, Eastern"
+            style={styles.input}
+          />
+
+          <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
+            Tank Ownership
+          </ThemedText>
+          <View style={styles.photoActionsRow}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setTankOwnership("owned")}
+              style={optionStyle(tankOwnership === "owned")}
+            >
+              <ThemedText type="defaultSemiBold">Owned</ThemedText>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setTankOwnership("leased")}
+              style={optionStyle(tankOwnership === "leased")}
+            >
+              <ThemedText type="defaultSemiBold">Leased</ThemedText>
+            </Pressable>
+          </View>
+
           <View style={styles.toggleRow}>
             <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
               Include with fee statement

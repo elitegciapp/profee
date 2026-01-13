@@ -2,12 +2,25 @@ import * as FileSystem from "expo-file-system";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 
+import { imageUriToBase64 } from "../../lib/imageToBase64";
+
 import { Statement } from "../models/statement";
 import { buildStatementHtml } from "./statementTemplate";
 
 export type StatementPdfResult = {
   uri: string;
   filename: string;
+};
+
+export type StatementPdfOptions = {
+  fuelProrationCredit?: number;
+  fuelProrationPercent?: number;
+  fuelProrationCreditTo?: "buyer" | "seller";
+  fuelGaugePhotoUri?: string;
+  fuelType?: "oil" | "propane" | "kerosene";
+  fuelCompany?: string;
+  tankOwnership?: "owned" | "leased";
+  tanks?: { gallons: number; pricePerGallon: number }[];
 };
 
 function sanitizeFilename(input: string) {
@@ -74,7 +87,7 @@ async function ensureNamedPdfUri(sourceUri: string, filename: string): Promise<s
 
 export async function exportStatementPdf(
   statement: Statement,
-  options?: { fuelProrationCredit?: number; fuelProrationPercent?: number }
+  options?: StatementPdfOptions
 ) {
   const { uri: namedUri, filename: desiredFilename } = await createStatementPdf(statement, options);
 
@@ -91,9 +104,22 @@ export async function exportStatementPdf(
 
 export async function createStatementPdf(
   statement: Statement,
-  options?: { fuelProrationCredit?: number; fuelProrationPercent?: number }
+  options?: StatementPdfOptions
 ): Promise<StatementPdfResult> {
-  const html = buildStatementHtml(statement, options);
+  const fuelGaugePhotoDataUrl = options?.fuelGaugePhotoUri
+    ? await imageUriToBase64(options.fuelGaugePhotoUri)
+    : null;
+
+  const html = buildStatementHtml(statement, {
+    fuelProrationCredit: options?.fuelProrationCredit,
+    fuelProrationPercent: options?.fuelProrationPercent,
+    fuelProrationCreditTo: options?.fuelProrationCreditTo,
+    fuelGaugePhotoDataUrl: fuelGaugePhotoDataUrl ?? undefined,
+    fuelType: options?.fuelType,
+    fuelCompany: options?.fuelCompany,
+    tankOwnership: options?.tankOwnership,
+    tanks: options?.tanks,
+  });
   const filename = buildFilename(statement);
 
   const result = await Print.printToFileAsync({
