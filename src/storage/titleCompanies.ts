@@ -14,3 +14,9 @@ export async function saveTitleCompany(company: TitleCompany) {
   const updated = [company, ...existing.filter((c) => c.id !== company.id)];
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 }
+
+export async function deleteTitleCompany(id: string) {
+  const existing = await getAllTitleCompanies();
+  const updated = existing.filter((c) => c.id !== id);
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+}

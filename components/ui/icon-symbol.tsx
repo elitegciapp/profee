@@ -17,6 +17,7 @@ const MAPPING = {
   'house.fill': 'home',
   'paperplane.fill': 'send',
   'building.2.fill': 'business',
+  'trash.fill': 'delete',
   'drop': 'opacity',
   'clock.fill': 'history',
   'gearshape.fill': 'settings',

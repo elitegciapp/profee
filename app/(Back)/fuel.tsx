@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { Image } from "expo-image";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { NeonCard } from "@/components/ui/neon-card";
@@ -7,8 +9,12 @@ import { NeonInput } from "@/components/ui/neon-input";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/src/context/ThemeContext";
 import { LinearGradient } from "expo-linear-gradient";
-import type { FuelTank } from "@/src/models/fuelProration";
-import { getFuelProrationSession, setFuelProrationSession } from "@/src/storage/fuelProrationSession";
+import type { FuelPhotoAttachment, FuelTank } from "@/src/models/fuelProration";
+import {
+  getFuelProrationSession,
+  hydrateFuelProrationSession,
+  setFuelProrationSession,
+} from "@/src/storage/fuelProrationSession";
 import { calculateFuelProration, clamp, parseDecimalInput } from "@/src/utils/fuelCalculations";
 
 function createId(): string {
@@ -138,12 +144,38 @@ export default function FuelScreen() {
       marginTop: 6,
       lineHeight: 28,
     },
+
+    photoActionsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    photoButton: {
+      flex: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+    },
+    photoPreview: {
+      width: "100%",
+      height: 180,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: isDark ? theme.colors.borderEmphasis : theme.colors.border,
+      backgroundColor: theme.colors.bgSecondary,
+      overflow: "hidden",
+    },
+    photoErrorText: {
+      color: theme.colors.danger,
+      fontSize: 12,
+    },
   });
 
   const [tanks, setTanks] = useState<FuelTank[]>([]);
   const [includeInStatement, setIncludeInStatement] = useState<boolean>(initial.includeInStatement);
   const [exportFuelOnly, setExportFuelOnly] = useState<boolean>(initial.exportFuelOnly);
   const [creditToBuyer, setCreditToBuyer] = useState<boolean>(initial.creditTo === "buyer");
+  const [photo, setPhoto] = useState<FuelPhotoAttachment | null>(initial.photo ?? null);
+  const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
   const [priceInputById, setPriceInputById] = useState<Record<string, string>>({});
 
   const { tankResults, totalCredit } = useMemo(() => calculateFuelProration(tanks), [tanks]);
@@ -164,6 +196,20 @@ export default function FuelScreen() {
   }, [tankResults]);
 
   useEffect(() => {
+    hydrateFuelProrationSession()
+      .then(() => {
+        const next = getFuelProrationSession();
+        setIncludeInStatement(next.includeInStatement);
+        setExportFuelOnly(next.exportFuelOnly);
+        setCreditToBuyer(next.creditTo === "buyer");
+        setPhoto(next.photo ?? null);
+      })
+      .catch(() => {
+        // ignore hydration failures
+      });
+  }, []);
+
+  useEffect(() => {
     setFuelProrationSession({
       includeInStatement,
       exportFuelOnly,
@@ -172,6 +218,69 @@ export default function FuelScreen() {
       creditTo: creditToBuyer ? "buyer" : "seller",
     });
   }, [includeInStatement, exportFuelOnly, totalCredit, totalPercent, creditToBuyer]);
+
+  function normalizePickedPhoto(asset: ImagePicker.ImagePickerAsset): FuelPhotoAttachment | null {
+    if (!asset?.uri) return null;
+    const fileName = asset.fileName ?? asset.uri.split("/").pop() ?? undefined;
+    return {
+      uri: asset.uri,
+      width: Number.isFinite(asset.width) ? asset.width : 0,
+      height: Number.isFinite(asset.height) ? asset.height : 0,
+      fileName,
+    };
+  }
+
+  async function attachFromCamera() {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("Camera permission required", "Enable camera access to take a fuel photo.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.85,
+    });
+
+    if (result.canceled) return;
+    const asset = result.assets?.[0];
+    const next = asset ? normalizePickedPhoto(asset) : null;
+
+    if (!next) {
+      Alert.alert("Photo error", "Failed to read photo URI.");
+      return;
+    }
+
+    setPhotoLoadFailed(false);
+    setPhoto(next);
+    setFuelProrationSession({ photo: next });
+  }
+
+  async function attachFromLibrary() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("Photo library permission required", "Enable photo access to attach a fuel photo.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.85,
+    });
+
+    if (result.canceled) return;
+    const asset = result.assets?.[0];
+    const next = asset ? normalizePickedPhoto(asset) : null;
+
+    if (!next) {
+      Alert.alert("Photo error", "Failed to read photo URI.");
+      return;
+    }
+
+    setPhotoLoadFailed(false);
+    setPhoto(next);
+    setFuelProrationSession({ photo: next });
+  }
 
   function addTank() {
     const id = createId();
@@ -272,6 +381,45 @@ export default function FuelScreen() {
           <ThemedText style={styles.helperText}>
             Turn off to credit the seller.
           </ThemedText>
+
+          <View style={styles.divider} />
+
+          <View style={styles.photoActionsRow}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={attachFromCamera}
+              style={[styles.secondaryButton, styles.photoButton]}
+            >
+              <ThemedText type="defaultSemiBold">Take photo</ThemedText>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={attachFromLibrary}
+              style={[styles.secondaryButton, styles.photoButton]}
+            >
+              <ThemedText type="defaultSemiBold">Choose photo</ThemedText>
+            </Pressable>
+          </View>
+
+          {photo ? (
+            <>
+              <View style={styles.divider} />
+              <Image
+                source={{ uri: photo.uri }}
+                style={styles.photoPreview}
+                contentFit="cover"
+                onError={() => {
+                  setPhotoLoadFailed(true);
+                  Alert.alert("Photo error", "Failed to read photo URI.");
+                }}
+              />
+              {photoLoadFailed ? (
+                <ThemedText style={styles.photoErrorText}>
+                  Photo failed to load. Please re-select it.
+                </ThemedText>
+              ) : null}
+            </>
+          ) : null}
         </NeonCard>
 
         {tankResults.map((tank) => (

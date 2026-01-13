@@ -6,6 +6,13 @@ export interface FuelTank {
   pricePerGallon: number;
 }
 
+export type FuelPhotoAttachment = {
+  uri: string;
+  width: number;
+  height: number;
+  fileName?: string;
+};
+
 export interface FuelProration {
   tanks: FuelTank[];
   totalCredit: number;

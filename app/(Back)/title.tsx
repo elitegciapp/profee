@@ -6,10 +6,11 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 import { NeonCard } from "@/components/ui/neon-card";
 import { NeonInput } from "@/components/ui/neon-input";
 import type { TitleCompany } from "@/src/models/titleCompany";
-import { getAllTitleCompanies, saveTitleCompany } from "@/src/storage/titleCompanies";
+import { deleteTitleCompany, getAllTitleCompanies, saveTitleCompany } from "@/src/storage/titleCompanies";
 import { setTitleCompanySelectionForStatement } from "@/src/storage/titleCompanySelection";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useTheme } from "@/src/context/ThemeContext";
@@ -101,16 +102,26 @@ export default function TitleCompaniesScreen() {
       marginBottom: 0,
       gap: 6,
     },
+    companyRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      gap: 12,
+    },
     companyPressable: {
       backgroundColor: "transparent",
+      flex: 1,
     },
     companyName: {
       color: theme.colors.textPrimary,
       fontWeight: "700",
     },
-    companyMeta: {
-      color: theme.colors.textMuted,
-      fontSize: 12,
+    deleteButton: {
+      padding: 8,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.danger,
+      alignSelf: "flex-start",
     },
     divider: {
       ...theme.ui.divider,
@@ -194,6 +205,28 @@ export default function TitleCompaniesScreen() {
     setPhone(company.phone ?? "");
   }
 
+  function confirmDelete(company: TitleCompany) {
+    Alert.alert(
+      "Delete Title Company",
+      "This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            await deleteTitleCompany(company.id);
+            await load();
+
+            if (editingId === company.id) {
+              resetForm();
+            }
+          },
+        },
+      ]
+    );
+  }
+
   return (
     <ThemedView style={styles.screen}>
       <LinearGradient
@@ -266,18 +299,24 @@ export default function TitleCompaniesScreen() {
 
         {companies.map((company) => (
           <NeonCard key={company.id} style={styles.companyCard}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => (isSelectMode ? onSelect(company) : beginEdit(company))}
-              style={styles.companyPressable}
-            >
-              <ThemedText style={styles.companyName}>{company.name}</ThemedText>
-              <ThemedText style={styles.companyMeta}>{company.email}</ThemedText>
-              {company.contactName ? (
-                <ThemedText style={styles.companyMeta}>Contact: {company.contactName}</ThemedText>
-              ) : null}
-              {company.phone ? <ThemedText style={styles.companyMeta}>Phone: {company.phone}</ThemedText> : null}
-            </Pressable>
+            <View style={styles.companyRow}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => (isSelectMode ? onSelect(company) : beginEdit(company))}
+                style={styles.companyPressable}
+              >
+                <ThemedText style={styles.companyName}>{company.name}</ThemedText>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Delete ${company.name}`}
+                onPress={() => confirmDelete(company)}
+                style={styles.deleteButton}
+              >
+                <IconSymbol name="trash.fill" size={18} color={theme.colors.danger} />
+              </Pressable>
+            </View>
           </NeonCard>
         ))}
 
