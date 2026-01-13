@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-raw-text */
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -315,6 +316,23 @@ export default function FuelScreen() {
     setFuelProrationSession({ photo: next });
   }
 
+  function confirmRemovePhoto() {
+    if (!photo) return;
+
+    Alert.alert("Delete photo?", "This will remove the attached fuel gauge photo.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => {
+          setPhotoLoadFailed(false);
+          setPhoto(null);
+          setFuelProrationSession({ photo: undefined });
+        },
+      },
+    ]);
+  }
+
   function addTank() {
     const id = createId();
     setTanks((prev) => [
@@ -490,6 +508,19 @@ export default function FuelScreen() {
           {photo ? (
             <>
               <View style={styles.divider} />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Delete fuel gauge photo"
+                onPress={confirmRemovePhoto}
+                style={[
+                  styles.secondaryButton,
+                  { borderColor: theme.colors.danger, paddingVertical: 12, paddingHorizontal: 12 },
+                ]}
+              >
+                <ThemedText type="defaultSemiBold" style={{ color: theme.colors.danger }}>
+                  Delete photo
+                </ThemedText>
+              </Pressable>
               <Image
                 source={{ uri: photo.uri }}
                 style={styles.photoPreview}
