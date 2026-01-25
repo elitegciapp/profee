@@ -9,10 +9,22 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.profee.app"
+      "bundleIdentifier": "app.profee.profee"
+    },
+    "android": {
+      "package": "app.profee.profee"
+    }
+      }
     },
     "android": {
       "package": "com.profee.app"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "413853a8-e434-478d-a419-5ba1ca6cbc41"
+      }
+    },
+    "owner": "elitegci"
   }
 }
+
