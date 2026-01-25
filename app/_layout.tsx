@@ -8,6 +8,7 @@ import { View } from 'react-native';
 
 import { ThemeProvider, useTheme } from '@/src/context/ThemeContext';
 import { SplashOverlay } from '@/components/splash-overlay';
+import { runVersionMigration } from '@/src/utils/versionMigration';
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // ignore
@@ -32,6 +33,11 @@ function RootNavigation() {
   const [showSplash, setShowSplash] = useState(true);
   const [hideSplash, setHideSplash] = useState(false);
   const [rootLaidOut, setRootLaidOut] = useState(false);
+
+  // 🔑 Run once on app launch to clear mock AsyncStorage data on version upgrade
+  useEffect(() => {
+    runVersionMigration();
+  }, []);
 
   const navTheme: Theme = {
     dark: colorScheme === 'dark',
@@ -64,7 +70,6 @@ function RootNavigation() {
 
   useEffect(() => {
     if (!rootLaidOut) return;
-    // Keep a short minimum display time for the logo fade-in, then fade out.
     const t = setTimeout(() => setHideSplash(true), 950);
     return () => clearTimeout(t);
   }, [rootLaidOut]);
@@ -82,7 +87,8 @@ function RootNavigation() {
             contentStyle: {
               backgroundColor: theme.colors.bgPrimary,
             },
-          }}>
+          }}
+        >
           <Stack.Screen name="(Back)" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
