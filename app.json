@@ -3,21 +3,13 @@
     "name": "ProFee",
     "slug": "profee",
     "version": "1.0.1",
-    "platforms": [
-      "ios",
-      "android"
-    ],
+    "platforms": ["ios", "android"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.profee.profee"
     },
     "android": {
       "package": "app.profee.profee"
-    }
-      }
-    },
-    "android": {
-      "package": "com.profee.app"
     },
     "extra": {
       "eas": {
