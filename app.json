@@ -4,7 +4,7 @@
     "slug": "profee",
     "version": "1.0.1",
     "orientation": "portrait",
-    "icon": "./assets/images/NewIcon.png",
+    "icon": "./assets/images/RevisedIcon.png",
     "scheme": "profeemobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
