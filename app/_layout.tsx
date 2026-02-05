@@ -19,6 +19,12 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
+  useEffect(() => {
+    // TEMP REVIEW-SAFETY LOG: helps confirm we reached first render during App Review.
+    // Keep lightweight and non-blocking.
+    console.info('[startup] RootLayout mounted');
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
@@ -59,6 +65,11 @@ function RootNavigation() {
 
   const onRootLayout = useCallback(() => {
     setRootLaidOut(true);
+  }, []);
+
+  useEffect(() => {
+    // TEMP REVIEW-SAFETY LOG: confirms navigation subtree is mounting.
+    console.info('[startup] RootNavigation mounted');
   }, []);
 
   useEffect(() => {
